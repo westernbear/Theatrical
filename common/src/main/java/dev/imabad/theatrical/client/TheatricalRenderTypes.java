@@ -5,11 +5,15 @@ import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.AddressMode;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import dev.imabad.theatrical.Theatrical;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.resources.Identifier;
 
 public final class TheatricalRenderTypes {
@@ -24,6 +28,14 @@ public final class TheatricalRenderTypes {
             .withCull(false)
             .build());
 
+    public static final RenderType FIXTURE_MODEL = RenderType.create("theatrical_fixture_model",
+            RenderSetup.builder(RenderPipelines.CUTOUT_BLOCK)
+                    .withTexture("Sampler0", TextureAtlas.LOCATION_BLOCKS, () -> RenderSystem.getSamplerCache()
+                            .getSampler(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE,
+                                    FilterMode.LINEAR, FilterMode.NEAREST, true))
+                    .useLightmap()
+                    .affectsCrumbling()
+                    .createRenderSetup());
     public static final RenderType FADER = RenderType.create("theatrical_fader",
             RenderSetup.builder(FADER_PIPELINE).createRenderSetup());
     public static final RenderType BEAM = RenderType.create("theatrical_beam",

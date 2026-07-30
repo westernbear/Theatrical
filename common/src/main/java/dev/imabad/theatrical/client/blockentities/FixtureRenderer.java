@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.imabad.theatrical.api.Fixture;
 import dev.imabad.theatrical.blockentities.light.BaseLightBlockEntity;
 import dev.imabad.theatrical.blocks.HangableBlock;
+import dev.imabad.theatrical.client.TheatricalRenderTypes;
 import dev.imabad.theatrical.config.TheatricalConfig;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockModelRenderState;
@@ -91,7 +92,7 @@ public abstract class FixtureRenderer<T extends BaseLightBlockEntity>
         model.collectParts(RandomSource.create(state.blockPos.asLong()), parts);
         submitNodeCollector.submitBlockModel(
                 poseStack,
-                net.minecraft.client.renderer.rendertype.RenderTypes.cutoutMovingBlock(),
+                TheatricalRenderTypes.FIXTURE_MODEL,
                 parts,
                 BlockModelRenderState.EMPTY_TINTS,
                 state.lightCoords,
