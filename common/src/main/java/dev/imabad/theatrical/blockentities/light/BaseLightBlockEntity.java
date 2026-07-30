@@ -1,5 +1,6 @@
 package dev.imabad.theatrical.blockentities.light;
 
+import dev.imabad.theatrical.Theatrical;
 import dev.imabad.theatrical.api.DynamicLightProvider;
 import dev.imabad.theatrical.api.FixtureProvider;
 import dev.imabad.theatrical.api.Support;
@@ -9,14 +10,15 @@ import dev.imabad.theatrical.blocks.HangableBlock;
 import dev.imabad.theatrical.blocks.light.BaseLightBlock;
 import dev.imabad.theatrical.config.TheatricalConfig;
 import dev.imabad.theatrical.lighting.LightManager;
-import dev.imabad.theatrical.mixin.ClipContextAccessor;
+import io.github.westernbear.lumina.api.LuminaLights;
+import io.github.westernbear.lumina.light.LightCaster;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.core.AxisCycle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
@@ -24,6 +26,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
@@ -41,47 +45,47 @@ public abstract class BaseLightBlockEntity extends ClientSyncBlockEntity impleme
     private BlockPos emissionBlock, prevEmissionBlock;
     private int prevLuminance;
     private LongOpenHashSet trackedLitChunkPos = new LongOpenHashSet();
+    private LightCaster luminaLight;
+    private BlockState luminaBlockState;
+    private boolean luminaDirty = true;
 
     public BaseLightBlockEntity(BlockEntityType<?> blockEntityType, BlockPos blockPos, BlockState blockState) {
         super(blockEntityType, blockPos, blockState);
     }
 
     @Override
-    public void write(CompoundTag compoundTag) {
-        if (compoundTag == null) {
-            compoundTag = new CompoundTag();
-        }
-        compoundTag.putInt("pan", this.pan);
-        compoundTag.putInt("tilt", this.tilt);
-        compoundTag.putInt("focus", this.focus);
-        compoundTag.putDouble("distance", distance);
-        compoundTag.putInt("intensity", intensity);
-        compoundTag.putInt("prevIntensity", prevIntensity);
-        compoundTag.putInt("red", red);
-        compoundTag.putInt("green", green);
-        compoundTag.putInt("blue", blue);
-        compoundTag.putInt("prevRed", prevRed);
-        compoundTag.putInt("prevGreen", prevGreen);
-        compoundTag.putInt("prevBlue", prevBlue);
+    public void write(ValueOutput output) {
+        output.putInt("pan", this.pan);
+        output.putInt("tilt", this.tilt);
+        output.putInt("focus", this.focus);
+        output.putDouble("distance", distance);
+        output.putInt("intensity", intensity);
+        output.putInt("prevIntensity", prevIntensity);
+        output.putInt("red", red);
+        output.putInt("green", green);
+        output.putInt("blue", blue);
+        output.putInt("prevRed", prevRed);
+        output.putInt("prevGreen", prevGreen);
+        output.putInt("prevBlue", prevBlue);
     }
 
     @Override
-    public void read(CompoundTag compoundTag) {
-        pan = compoundTag.getInt("pan");
-        tilt = compoundTag.getInt("tilt");
-        focus = compoundTag.getInt("focus");
+    public void read(ValueInput input) {
+        pan = input.getIntOr("pan", 0);
+        tilt = input.getIntOr("tilt", 0);
+        focus = input.getIntOr("focus", 0);
         prevPan = pan;
         prevTilt = tilt;
         prevFocus = focus;
-        distance = compoundTag.getDouble("distance");
-        intensity = compoundTag.getInt("intensity");
-        prevIntensity = compoundTag.getInt("prevIntensity");
-        red = compoundTag.getInt("red");
-        green = compoundTag.getInt("green");
-        blue = compoundTag.getInt("blue");
-        prevRed = compoundTag.getInt("prevRed");
-        prevGreen = compoundTag.getInt("prevGreen");
-        prevBlue = compoundTag.getInt("prevBlue");
+        distance = input.getDoubleOr("distance", 0);
+        intensity = input.getIntOr("intensity", 0);
+        prevIntensity = input.getIntOr("prevIntensity", 0);
+        red = input.getIntOr("red", 0);
+        green = input.getIntOr("green", 0);
+        blue = input.getIntOr("blue", 0);
+        prevRed = input.getIntOr("prevRed", 0);
+        prevGreen = input.getIntOr("prevGreen", 0);
+        prevBlue = input.getIntOr("prevBlue", 0);
     }
 
     public double getDistance() {
@@ -180,21 +184,86 @@ public abstract class BaseLightBlockEntity extends ClientSyncBlockEntity impleme
 
     public static <T extends BlockEntity> void tick(Level level, BlockPos pos, BlockState state, T be) {
         BaseLightBlockEntity tile = (BaseLightBlockEntity) be;
+        if (state != tile.luminaBlockState) {
+            tile.luminaDirty = true;
+        }
         if(tile.shouldTrace()){
-            tile.distance = tile.doRayTrace();
+            double distance = tile.doRayTrace();
+            if (distance != tile.distance) {
+                tile.distance = distance;
+                tile.luminaDirty = true;
+            }
         }
         tile.tick();
+        if (level instanceof ServerLevel serverLevel) {
+            tile.syncLumina(serverLevel);
+        }
         if (level.isClientSide() && LightManager.shouldUpdateDynamicLight()) {
             if (tile.isRemoved()) {
                 tile.setLightEnabled(false);
             } else {
-                tile.lightTick();
                 LightManager.updateTracking(tile);
             }
         }
     }
 
     public void tick() {}
+
+    @Override
+    public void setChanged() {
+        super.setChanged();
+        luminaDirty = true;
+    }
+
+    private void syncLumina(ServerLevel level) {
+        if (!luminaDirty) {
+            return;
+        }
+        luminaBlockState = getBlockState();
+        if (!emitsLight() || !getFixture().hasBeam() || intensity <= 0 || getColour() == 0) {
+            if (luminaLight != null) {
+                LuminaLights.remove(level, luminaLight.getId());
+                luminaLight = null;
+            }
+            luminaDirty = false;
+            return;
+        }
+
+        Vec3 direction = rayTraceDir(this).normalize();
+        float outerAngle = (float) Math.toDegrees(Math.atan2(getLightSpread(), getMaxLightDistance()));
+        LightCaster next = (luminaLight == null ? LightCaster.block(getBlockPos()) : luminaLight.copy())
+                .pos((float) (0.5 + direction.x * 0.25),
+                        (float) (0.5 + direction.y * 0.25),
+                        (float) (0.5 + direction.z * 0.25))
+                .direction((float) direction.x, (float) direction.y, (float) direction.z)
+                .color(red, green, blue, 255)
+                .intensity(intensity)
+                .distance(Mth.clamp((float) distance, 0.0F, 200.0F))
+                .angle(outerAngle * 0.75F, outerAngle)
+                .setShadow(LightCaster.ShadowConfig.DEFAULT.withEnabled(false))
+                .setFlare(LightCaster.FlareConfig.DEFAULT.withEnabled(false));
+
+        if (luminaLight == null) {
+            try {
+                luminaLight = LuminaLights.addTemporary(level, next);
+            } catch (IllegalStateException exception) {
+                Theatrical.LOGGER.warn("Could not register Lumina light at {}: {}", getBlockPos(), exception.getMessage());
+            }
+        } else if (!sameLuminaLight(luminaLight, next)) {
+            luminaLight = LuminaLights.update(level, next);
+        }
+        luminaDirty = false;
+    }
+
+    private static boolean sameLuminaLight(LightCaster first, LightCaster second) {
+        return first.getPosition().equals(second.getPosition())
+                && first.getDirection().equals(second.getDirection())
+                && first.getColor().equals(second.getColor())
+                && first.getIntensity() == second.getIntensity()
+                && first.getDistance() == second.getDistance()
+                && first.getInnerAngle() == second.getInnerAngle()
+                && first.getOuterAngle() == second.getOuterAngle();
+    }
 
     public int getPan() {
         return pan;
@@ -373,10 +442,10 @@ public abstract class BaseLightBlockEntity extends ClientSyncBlockEntity impleme
     public double doRayTrace() {
         Vec3 viewVector = BaseLightBlockEntity.rayTraceDir(this);
         double distance = getMaxLightDistance();
-        Vec3 vec3 = getBlockPos().getCenter();
+        Vec3 vec3 = Vec3.atCenterOf(getBlockPos());
         Vec3 vec33 = vec3.add(viewVector.x * distance, viewVector.y * distance, viewVector.z * distance);
-        ClipContext context = new ClipContext(vec3, vec33, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, null);
-        ((ClipContextAccessor) context).setCollisionContext(new LightCollisionContext(getBlockPos()));
+        ClipContext context = new ClipContext(vec3, vec33, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE,
+                new LightCollisionContext(getBlockPos()));
         BlockHitResult result = this.level.clip(context);
         BlockPos lightPos = result.getBlockPos();
         if (result.getType() != HitResult.Type.MISS && !result.isInside()) {
@@ -392,6 +461,10 @@ public abstract class BaseLightBlockEntity extends ClientSyncBlockEntity impleme
 
     @Override
     public void setRemoved() {
+        if (level instanceof ServerLevel serverLevel && luminaLight != null) {
+            LuminaLights.remove(serverLevel, luminaLight.getId());
+            luminaLight = null;
+        }
         if(emissionBlock != null){
             this.setLightEnabled(false);
             emissionBlock = null;
@@ -416,6 +489,9 @@ public abstract class BaseLightBlockEntity extends ClientSyncBlockEntity impleme
 
     @Override
     public int getLightLuminance() {
+        if (getFixture().hasBeam()) {
+            return 0;
+        }
         float newVal = intensity / 255f;
         return (int) (newVal * 15f);
     }
@@ -423,21 +499,6 @@ public abstract class BaseLightBlockEntity extends ClientSyncBlockEntity impleme
     @Override
     public Vector3f getLightPos() {
         return Vec3.atCenterOf(emissionBlock).toVector3f();
-    }
-
-    @Override
-    public boolean isLightEnabled() {
-        return DynamicLightProvider.super.isLightEnabled();
-    }
-
-    @Override
-    public void resetLight() {
-
-    }
-
-    @Override
-    public void lightTick() {
-
     }
 
     @Override

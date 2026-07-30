@@ -1,5 +1,6 @@
 package dev.imabad.theatrical.blocks.light;
 
+import com.mojang.serialization.MapCodec;
 import dev.imabad.theatrical.TheatricalClient;
 import dev.imabad.theatrical.TheatricalScreen;
 import dev.imabad.theatrical.blockentities.BlockEntities;
@@ -35,9 +36,10 @@ import org.jetbrains.annotations.Nullable;
 
 public class MovingLightBlock extends BaseLightBlock{
 
+    private static final MapCodec<MovingLightBlock> CODEC = simpleCodec(MovingLightBlock::new);
 
-    public MovingLightBlock() {
-        super(Properties.of()
+    public MovingLightBlock(Properties properties) {
+        super(properties
             .requiresCorrectToolForDrops()
             .strength(3, 3)
             .noOcclusion()
@@ -45,6 +47,11 @@ public class MovingLightBlock extends BaseLightBlock{
             .mapColor(MapColor.METAL)
             .sound(SoundType.METAL)
             .pushReaction(PushReaction.DESTROY));
+    }
+
+    @Override
+    protected MapCodec<MovingLightBlock> codec() {
+        return CODEC;
     }
     @Nullable
     @Override
@@ -97,20 +104,18 @@ public class MovingLightBlock extends BaseLightBlock{
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if(super.use(state, level, pos, player, hand, hit) == InteractionResult.PASS) {
-            if (level.isClientSide) {
-                if (player.isCrouching()) {
-                    if (TheatricalClient.DEBUG_BLOCKS.contains(pos)) {
-                        TheatricalClient.DEBUG_BLOCKS.remove(pos);
-                    } else {
-                        TheatricalClient.DEBUG_BLOCKS.add(pos);
-                    }
-                    return InteractionResult.SUCCESS;
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (level.isClientSide()) {
+            if (player.isCrouching()) {
+                if (TheatricalClient.DEBUG_BLOCKS.contains(pos)) {
+                    TheatricalClient.DEBUG_BLOCKS.remove(pos);
+                } else {
+                    TheatricalClient.DEBUG_BLOCKS.add(pos);
                 }
-            } else {
-                new OpenScreen(pos, TheatricalScreen.GENERIC_DMX).sendTo((ServerPlayer) player);
+                return InteractionResult.SUCCESS;
             }
+        } else {
+            new OpenScreen(pos, TheatricalScreen.GENERIC_DMX).sendTo((ServerPlayer) player);
         }
         return InteractionResult.SUCCESS;
     }

@@ -6,14 +6,16 @@ import dev.imabad.theatrical.blockentities.control.BasicLightingDeskBlockEntity;
 import dev.imabad.theatrical.client.gui.widgets.FaderWidget;
 import dev.imabad.theatrical.net.*;
 import dev.imabad.theatrical.util.UUIDUtil;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -21,7 +23,7 @@ import java.util.stream.Stream;
 
 public class BasicLightingDeskScreen extends Screen {
 
-    private final ResourceLocation GUI = new ResourceLocation(Theatrical.MOD_ID, "textures/gui/lighting_console.png");
+    private final Identifier GUI = Identifier.fromNamespaceAndPath(Theatrical.MOD_ID, "textures/gui/lighting_console.png");
 
     private final int imageWidth;
     private final int imageHeight;
@@ -39,40 +41,37 @@ public class BasicLightingDeskScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        this.renderWindow(guiGraphics);
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(graphics, mouseX, mouseY, partialTick);
+        this.extractWindow(graphics);
     }
 
     @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        this.renderLabels(guiGraphics);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        this.extractLabels(graphics);
     }
 
-    private void renderWindow(GuiGraphics guiGraphics) {
+    private void extractWindow(GuiGraphicsExtractor graphics) {
         int relX = (this.width - this.imageWidth) / 2;
         int relY = (this.height - this.imageHeight) / 2;
-        guiGraphics.blit(GUI, relX, relY, 0, 0, this.imageWidth, this.imageHeight);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, GUI, relX, relY, 0, 0, this.imageWidth, this.imageHeight, 256, 256);
     }
 
-    private void renderLabels(GuiGraphics guiGraphics) {
-        renderLabel(guiGraphics, "ui.control.step", 20, 57, be.getCurrentStep());
-        renderLabel(guiGraphics, be.isRunMode() ? "ui.control.modes.run" : "ui.control.modes.program", 41, 90);
-        renderLabel(guiGraphics, "ui.control.cues", 100, 5);
+    private void extractLabels(GuiGraphicsExtractor graphics) {
+        extractLabel(graphics, "ui.control.step", 20, 57, be.getCurrentStep());
+        extractLabel(graphics, be.isRunMode() ? "ui.control.modes.run" : "ui.control.modes.program", 41, 90);
+        extractLabel(graphics, "ui.control.cues", 100, 5);
         for(int key : be.getStoredSteps().keySet()){
-            renderLabel(guiGraphics, "ui.control.cue", 101, 15 + (10 * key), key);
+            extractLabel(graphics, "ui.control.cue", 101, 15 + (10 * key), key);
         }
-        renderLabel(guiGraphics, "ui.control.fadeIn", 35, 10);
-        renderLabel(guiGraphics, "ui.control.fadeOut", 35, 33);
+        extractLabel(graphics, "ui.control.fadeIn", 35, 10);
+        extractLabel(graphics, "ui.control.fadeOut", 35, 33);
     }
 
-    private void renderLabel(GuiGraphics guiGraphics, String translationKey, int offSetX, int offSetY, Object... replacements) {
-        guiGraphics.pose().pushPose();
-//        guiGraphics.pose().scale(0.8f, 0.8f, 0.8f);
+    private void extractLabel(GuiGraphicsExtractor graphics, String translationKey, int offSetX, int offSetY, Object... replacements) {
         MutableComponent translatable = Component.translatable(translationKey, replacements);
-        guiGraphics.drawString(font, translatable, (xCenter + (this.imageWidth / 2) - (this.font.width(translatable.getString()) / 2)) + offSetX, yCenter + offSetY, 0x404040, false);
-        guiGraphics.pose().popPose();
+        graphics.text(font, translatable, (xCenter + (this.imageWidth / 2) - (this.font.width(translatable.getString()) / 2)) + offSetX, yCenter + offSetY, 0xFF404040, false);
     }
 
     @Override
@@ -112,16 +111,15 @@ public class BasicLightingDeskScreen extends Screen {
         this.fadeOutTime.setValue(Integer.toString(be.getFadeOutTicks()));
         this.addRenderableWidget(fadeInTime);
         this.addRenderableWidget(fadeOutTime);
-        this.addRenderableWidget(new CycleButton.Builder<UUID>((networkId) ->
+        this.addRenderableWidget(CycleButton.builder((UUID networkId) ->
         {
             if (TheatricalClient.getArtNetManager().getKnownNetworks().containsKey(networkId)) {
                 return Component.literal(TheatricalClient.getArtNetManager().getKnownNetworks().get(networkId));
             }
             return Component.literal("Unknown");
-        }
-        ).withValues(CycleButton.ValueListSupplier.create(Stream.concat(Stream.of(UUIDUtil.NULL),
+        }, networkId).withValues(CycleButton.ValueListSupplier.create(Stream.concat(Stream.of(UUIDUtil.NULL),
                         TheatricalClient.getArtNetManager().getKnownNetworks().keySet().stream()).collect(Collectors.toList())))
-                .displayOnlyValue().withInitialValue(networkId)
+                .displayOnlyValue()
                 .create(xCenter + 45, yCenter + 130, 150, 20,
                         Component.translatable("screen.artnetconfig.network"), (obj, val) -> {
                             this.networkId = val;
@@ -142,16 +140,16 @@ public class BasicLightingDeskScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         this.children().forEach(widget -> {
             if(widget instanceof FaderWidget fader) {
-                if (fader.isMouseOver(mouseX, mouseY) && fader.isDragging()) {
-                    int newVal = fader.updateValue(mouseY);
+                if (fader.isMouseOver(event.x(), event.y()) && fader.isDragging()) {
+                    int newVal = fader.updateValue(event.y());
                     new ControlUpdateFader(be.getBlockPos(), fader.getChannel(), newVal).sendToServer();
                 }
             }
         });
-        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+        return super.mouseDragged(event, dragX, dragY);
     }
 
     @Override

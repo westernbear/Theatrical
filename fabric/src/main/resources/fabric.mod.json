@@ -9,12 +9,13 @@
     "bright_spark"
   ],
   "contact": {
-    "homepage": "https://github.com/theatricalmod",
-    "sources": "https://github.com/theatricalmod"
+    "homepage": "https://github.com/westernbear/Theatrical",
+    "sources": "https://github.com/westernbear/Theatrical"
   },
   "license": "Apache-2.0",
   "icon": "assets/theatrical/icon.png",
   "environment": "*",
+  "accessWidener": "theatrical.accesswidener",
   "entrypoints": {
     "main": [
       "dev.imabad.theatrical.fabric.TheatricalFabric"
@@ -24,15 +25,20 @@
     ],
     "fabric-datagen": [
       "dev.imabad.theatrical.fabric.TheatricalDatagenFabric"
+    ],
+    "fabric-client-gametest": [
+      "dev.imabad.theatrical.fabric.TheatricalClientGameTest"
     ]
   },
   "mixins": [
-    "theatrical-common.mixins.json",
-    "theatrical-fabric.mixins.json"
+    "theatrical-common.mixins.json"
   ],
   "depends": {
-    "fabric": "*",
-    "minecraft": ">=1.20",
-    "architectury": ">=9.1.12"
+    "fabricloader": ">=0.19.3",
+    "fabric-api": ">=0.156.0",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "architectury": ">=21.0.6",
+    "lumina": ">=1.0.7-fabric.1"
   }
 }

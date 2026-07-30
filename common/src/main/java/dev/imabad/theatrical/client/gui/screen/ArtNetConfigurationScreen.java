@@ -10,7 +10,7 @@ import dev.imabad.theatrical.util.UUIDUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.CycleButton;
@@ -58,7 +58,6 @@ public class ArtNetConfigurationScreen extends Screen {
     protected void init() {
         super.init();
         layout = new GridLayout();
-//        layout = LinearLayout.vertical();
         layout.defaultCellSetting().alignHorizontallyCenter().padding(5);
         xCenter = (this.width / 2);
         yCenter = (this.height / 2);
@@ -86,7 +85,11 @@ public class ArtNetConfigurationScreen extends Screen {
         networkUniverse.visible = false;
         networkUniverse.active = false;
         layout.addChild(networkUniverse, 2, 2);
-        universeEnabled = new Checkbox(xCenter, yCenter, 150, 20, Component.translatable("screen.artnetconfig.networkEnabled"), false);
+        universeEnabled = Checkbox.builder(Component.translatable("screen.artnetconfig.networkEnabled"), this.font)
+                .pos(xCenter, yCenter)
+                .maxWidth(150)
+                .selected(false)
+                .build();
         universeEnabled.visible = false;
         universeEnabled.active = false;
         layout.addChild(universeEnabled, 2, 3);
@@ -98,33 +101,24 @@ public class ArtNetConfigurationScreen extends Screen {
         universe.visible = false;
         universe.active = false;
         layout.addChild(universe, 3, 3);
-        layout.addChild(new CycleButton.Builder<Boolean>((enabled) ->
+        layout.addChild(CycleButton.builder((Boolean enabled) ->
             Component.translatable("screen.artnetconfig.enabled", enabled ? "Yes" : "No")
-        ).withValues(List.of(true, false)).displayOnlyValue().withInitialValue(enabled).create(xCenter, yCenter, 150, 20, Component.translatable("screen.artnetconfig.enabled"), (obj, val) -> {
+        , enabled).withValues(List.of(true, false)).displayOnlyValue().create(xCenter, yCenter, 150, 20, Component.translatable("screen.artnetconfig.enabled"), (obj, val) -> {
             this.enabled = val;
         }), 5, 1);
-        layout.addChild(new CycleButton.Builder<UUID>((networkId) ->
+        layout.addChild(CycleButton.builder((UUID networkId) ->
         {
             if (TheatricalClient.getArtNetManager().getKnownNetworks().containsKey(networkId)) {
                 return Component.literal(TheatricalClient.getArtNetManager().getKnownNetworks().get(networkId));
             }
             return Component.literal("Unknown");
-        }
-        ).withValues(CycleButton.ValueListSupplier.create(Stream.concat(Stream.of(UUIDUtil.NULL),
+        }, networkId).withValues(CycleButton.ValueListSupplier.create(Stream.concat(Stream.of(UUIDUtil.NULL),
                         TheatricalClient.getArtNetManager().getKnownNetworks().keySet().stream()).collect(Collectors.toList())))
-                .displayOnlyValue().withInitialValue(networkId)
+                .displayOnlyValue()
                 .create(xCenter, yCenter, 150, 20,
                         Component.translatable("screen.artnetconfig.enabled"), (obj, val) -> {
                             this.networkId = val;
                         }), 5, 3);
-//        layout.addChild(new Button.Builder(
-//                ,
-//                button -> {
-//                    enabled = !enabled;
-//                }).pos(xCenter + 40, yCenter + 150)
-//                .size(100, 20)
-//                .build()
-//        );
         layout.addChild(
                 new Button.Builder(Component.translatable("artneti.save"), button -> this.update())
                         .pos(xCenter + 40, yCenter + 200)
@@ -134,7 +128,7 @@ public class ArtNetConfigurationScreen extends Screen {
         );
         layout.addChild(
                 new Button.Builder(Component.translatable("gui.back"), button -> {
-                    this.minecraft.setScreen(this.lastScreen);
+                    this.minecraft.gui.setScreen(this.lastScreen);
                 })
                         .pos(xCenter + 40, yCenter + 200)
                         .size(150, 20)
@@ -143,7 +137,6 @@ public class ArtNetConfigurationScreen extends Screen {
         );
         layout.arrangeElements();
         this.repositionElements();
-        this.addRenderableWidget(configList);
         layout.visitWidgets(this::addRenderableWidget);
     }
 
@@ -194,9 +187,9 @@ public class ArtNetConfigurationScreen extends Screen {
             universeEnabled.visible = true;
             universeEnabled.active = true;
             if (!universeEnabled.selected() && entry.getConfig().isEnabled()) {
-                universeEnabled.onPress();
+                universeEnabled.onPress(null);
             } else if (universeEnabled.selected() && !entry.getConfig().isEnabled()) {
-                universeEnabled.onPress();
+                universeEnabled.onPress(null);
             }
             deleteConfig.active = true;
             deleteConfig.visible = true;
@@ -220,12 +213,6 @@ public class ArtNetConfigurationScreen extends Screen {
     private void update(){
         try {
             saveCurrentSelection();
-//            int[] oldUniverses = Arrays.copyOf(universe, 4);
-//            for(int i = 0; i < universe.length; i++){
-//                int val = getValueFor(i + 1);
-//                universe[i] = val;
-//                setValueFor(i + 1, val);
-//            }
             boolean hasChangedIP = !Objects.equals(TheatricalConfig.INSTANCE.CLIENT.artNetIP, ipAddressBox.getValue()) && TheatricalConfig.INSTANCE.CLIENT.artNetIP != null;
             TheatricalConfig.INSTANCE.CLIENT.artNetIP = ipAddressBox.getValue();
             TheatricalConfig.INSTANCE.CLIENT.artnetEnabled = enabled;
@@ -246,72 +233,35 @@ public class ArtNetConfigurationScreen extends Screen {
                     if(TheatricalClient.getArtNetManager().getClient() != null) {
                         TheatricalClient.getArtNetManager().getClient().refreshSubscriptions();
                     }
-//                        for (int oldUnivers : oldUniverses) {
-//                            boolean found = false;
-//                            if (oldUnivers >= 0) {
-//                                for (int x = 0; x < universe.length; x++) {
-//                                    if (universe[x] == oldUnivers) {
-//                                        found = true;
-//                                        break;
-//                                    }
-//                                }
-//                                if (!found) {
-//                                    if (TheatricalClient.getArtNetManager().getClient().isSubscribedTo(oldUnivers)) {
-//                                        TheatricalClient.getArtNetManager().getClient().unsubscribeFromUniverse(oldUnivers);
-//                                    }
-//                                }
-//                            }
-//                        }
-//                        for (int j : universe) {
-//                            if (j >= 0 && !TheatricalClient.getArtNetManager().getClient().isSubscribedTo(j)) {
-//                                TheatricalClient.getArtNetManager().getClient().subscribeToUniverse(j);
-//                            }
-//                        }
-//                    }
                 }
             }
-            this.minecraft.setScreen(this.lastScreen);
-//            new UpdateArtNetInterface(be.getBlockPos(), ipAddressBox.getValue(), universe).sendToServer();
+            this.minecraft.gui.setScreen(this.lastScreen);
         } catch(NumberFormatException ignored) {
             //We need a nicer way to show that this is invalid?
         }
     }
 
     @Override
-    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-    }
-
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        this.renderLabels(guiGraphics);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        this.extractLabels(graphics);
     }
 
 
-    private void renderLabels(GuiGraphics guiGraphics) {
-//        renderLabel(guiGraphics, "screen.artnetconfig.universe", 0,15, 1);
-//        renderLabel(guiGraphics, "screen.artnetconfig.universe", 0,15, 2);
-//        renderLabel(guiGraphics, "screen.artnetconfig.universe", 0,15, 3);
-//        renderLabel(guiGraphics, "screen.artnetconfig.universe", 0,15, 4);
-//        renderLabel(guiGraphics, "artneti.ipAddress", 5,10);
-//        if(!this.be.isOwnedByCurrentClient()){
-//            renderLabel(guiGraphics, "artneti.notAuthorized", 5,75);
-//        } else {
+    private void extractLabels(GuiGraphicsExtractor graphics) {
         if(TheatricalConfig.INSTANCE.CLIENT.artnetEnabled) {
             if (TheatricalClient.getArtNetManager().getClient() != null && TheatricalClient.getArtNetManager().getClient().hasReceivedPacket()) {
                 long inSeconds = Math.round((float) (System.currentTimeMillis() - TheatricalClient.getArtNetManager().getClient().getLastPacketMS()) / 1000);
-                renderLabel(guiGraphics, "artneti.lastReceived", -50, ipAddressBox.getY() + 5, inSeconds);
+                extractLabel(graphics, "artneti.lastReceived", -50, ipAddressBox.getY() + 5, inSeconds);
             } else {
-                renderLabel(guiGraphics, "artneti.notConnected", -50, ipAddressBox.getY() + 5);
+                extractLabel(graphics, "artneti.notConnected", -50, ipAddressBox.getY() + 5);
             }
         }
-//        }
     }
 
-    private void renderLabel(GuiGraphics guiGraphics, String translationKey, int offSetX, int offSetY, Object... replacements){
+    private void extractLabel(GuiGraphicsExtractor graphics, String translationKey, int offSetX, int offSetY, Object... replacements){
         MutableComponent translatable = Component.translatable(translationKey, replacements);
-        guiGraphics.drawString(font, translatable, xCenter + (this.font.width(translatable.getString()) / 2) + offSetX, offSetY, 0xffffff, false);
+        graphics.text(font, translatable, xCenter + (this.font.width(translatable.getString()) / 2) + offSetX, offSetY, 0xFFFFFFFF, false);
     }
 
     @Override

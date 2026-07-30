@@ -27,7 +27,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -36,13 +36,13 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 public class BasicLightingDeskBlock extends Block implements EntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final VoxelShape SHAPE = Shapes.create(0, 0, 0, 16 / 16D, 3 / 16D, 16 / 16D);
 
     public static final BooleanProperty TRIGGERED = BooleanProperty.create("triggered");
 
-    public BasicLightingDeskBlock() {
-        super(Properties.of()
+    public BasicLightingDeskBlock(Properties properties) {
+        super(properties
                 .requiresCorrectToolForDrops()
                 .strength(3, 3)
                 .noOcclusion()
@@ -78,7 +78,7 @@ public class BasicLightingDeskBlock extends Block implements EntityBlock {
     }
 
     @Override
-    public boolean propagatesSkylightDown(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos) {
+    public boolean propagatesSkylightDown(BlockState blockState) {
         return true;
     }
 
@@ -90,12 +90,12 @@ public class BasicLightingDeskBlock extends Block implements EntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
-        return level.isClientSide ? null : blockEntityType == BlockEntities.BASIC_LIGHTING_DESK.get() ? BasicLightingDeskBlockEntity::tick : null;
+        return level.isClientSide() ? null : blockEntityType == BlockEntities.BASIC_LIGHTING_DESK.get() ? BasicLightingDeskBlockEntity::tick : null;
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if(!level.isClientSide){
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if(!level.isClientSide()){
             BasicLightingDeskBlockEntity be = (BasicLightingDeskBlockEntity) level.getBlockEntity(pos);
             if(be.getNetworkId() != UUIDUtil.NULL){
                 TheatricalNetwork network = TheatricalNetworkData.getInstance(level.getServer().overworld()).getNetwork(be.getNetworkId());
@@ -107,8 +107,10 @@ public class BasicLightingDeskBlock extends Block implements EntityBlock {
         }
         return InteractionResult.SUCCESS;
     }
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, BlockPos neighborPos, boolean movedByPiston) {
-        if (!level.isClientSide) {
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+                                   net.minecraft.world.level.redstone.Orientation orientation, boolean movedByPiston) {
+        if (!level.isClientSide()) {
             boolean powered=level.hasNeighborSignal(pos);
             if(level.getBlockEntity(pos) instanceof BasicLightingDeskBlockEntity be){
                 if(powered && !state.getValue(TRIGGERED)){

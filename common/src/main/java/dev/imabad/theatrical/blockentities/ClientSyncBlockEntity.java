@@ -1,6 +1,7 @@
 package dev.imabad.theatrical.blockentities;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -19,9 +20,7 @@ public abstract class ClientSyncBlockEntity extends BaseBlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
     @Override
-    public CompoundTag getUpdateTag() {
-        CompoundTag newTag = new CompoundTag();
-        write(newTag);
-        return newTag;
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
     }
 }

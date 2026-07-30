@@ -26,7 +26,7 @@ import net.minecraft.commands.synchronization.ArgumentTypeInfo;
 import net.minecraft.commands.synchronization.SingletonArgumentInfo;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -65,9 +65,9 @@ public class Theatrical {
         registerArgument(argTypes, SingletonArgumentInfo.contextFree(MemberRoleArgument::memberRole), "member_role", MemberRoleArgument.class);
         argTypes.register();
         dev.imabad.theatrical.items.Items.ITEMS.register();
-        PlayerEvent.PLAYER_JOIN.register((event) -> {
-            TheatricalNetworkData instance = TheatricalNetworkData.getInstance(event.server.overworld());
-            for (TheatricalNetwork network : instance.getNetworksForPlayer(event.connection.player.getUUID())) {
+        PlayerEvent.PLAYER_JOIN.register(player -> {
+            TheatricalNetworkData instance = TheatricalNetworkData.getInstance(player.level().getServer().overworld());
+            for (TheatricalNetwork network : instance.getNetworksForPlayer(player.getUUID())) {
                 for (Integer universe : network.dmx().getUniverses()) {
                     List<DMXDevice> devices = new ArrayList<>();
                     network.dmx().getConsumers(universe).forEach(consumer -> {
@@ -75,7 +75,7 @@ public class Theatrical {
                                 consumer.getChannelCount(), consumer.getDeviceTypeId(), consumer.getActivePersonality(), consumer.getModelName(),
                                 consumer.getFixtureId()));
                     });
-                    new ListConsumers(universe, devices).sendTo(event.connection.player);
+                    new ListConsumers(universe, devices).sendTo(player);
                 }
             }
         });
@@ -84,6 +84,11 @@ public class Theatrical {
                 TheatricalNetworkData.unloadLevel();
             }
         });
+        CreativeTabRegistry.append(TAB,
+                Items.MOVING_LIGHT, Items.PIPE, Items.ART_NET_INTERFACE, Items.LED_FRESNEL,
+                Items.TRUSS, Items.REDSTONE_INTERFACE, Items.TANK_TRAP, Items.LED_PANEL,
+                Items.BASIC_LIGHTING_DESK, Items.MOVING_WASH, Items.CONFIGURATION_CARD,
+                Items.FIXTURE_FOCUSER);
         CommandRegistrationEvent.EVENT.register((dispatcher, registry, selection) -> {
             NetworkCommand.register(dispatcher);
         });
@@ -91,7 +96,7 @@ public class Theatrical {
 
     private static void registerArgument(DeferredRegister<ArgumentTypeInfo<?, ?>> argTypes,
                                          ArgumentTypeInfo<?, ?> serializer, String id, Class<?> clazz) {
-        argTypes.register(new ResourceLocation(Theatrical.MOD_ID, id), () -> serializer);
+        argTypes.register(Identifier.fromNamespaceAndPath(Theatrical.MOD_ID, id), () -> serializer);
         ArgumentTypeInfosAccessor.classMap().put(clazz, serializer);
     }
 }

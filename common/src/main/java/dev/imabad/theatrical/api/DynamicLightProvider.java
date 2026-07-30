@@ -15,16 +15,13 @@ public interface DynamicLightProvider {
         return LightManager.containsLightSource(this);
     }
     default void setLightEnabled(boolean enabled) {
-        resetLight();
         if(enabled){
             LightManager.addLightSource(this);
         } else {
             LightManager.removeLightSource(this);
         }
     }
-    void resetLight();
     int getLightLuminance();
-    void lightTick();
     boolean shouldUpdateLight();
     boolean updateDynamicLight(LevelRenderer renderer);
     void scheduleTrackedChunksRebuild(LevelRenderer renderer);

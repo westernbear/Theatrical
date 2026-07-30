@@ -1,8 +1,8 @@
 package dev.imabad.theatrical.net;
 
 import dev.architectury.networking.NetworkManager;
-import dev.architectury.networking.simple.BaseS2CMessage;
-import dev.architectury.networking.simple.MessageType;
+import dev.imabad.theatrical.net.TheatricalNet.BaseS2CMessage;
+import dev.imabad.theatrical.net.TheatricalNet.MessageType;
 import dev.imabad.theatrical.TheatricalClient;
 import dev.imabad.theatrical.TheatricalScreen;
 import net.minecraft.core.BlockPos;

@@ -1,6 +1,7 @@
 package dev.imabad.theatrical.networks.members;
 
 import dev.imabad.theatrical.networks.TheatricalNetworkData;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -15,11 +16,14 @@ public record NetworkMemberManager(Set<TheatricalNetworkMember> members) {
 
     public NetworkMemberManager(CompoundTag data) {
         this(new HashSet<>());
-        ListTag membersList = data.getList("members", CompoundTag.TAG_COMPOUND);
+        ListTag membersList = data.getListOrEmpty("members");
         for (Tag tag : membersList) {
             CompoundTag member = (CompoundTag) tag;
-            UUID player = member.getUUID("player");
-            TheatricalNetworkMemberRole role = TheatricalNetworkMemberRole.valueOf(member.getString("role"));
+            UUID player = member.read("player", UUIDUtil.CODEC).orElse(null);
+            TheatricalNetworkMemberRole role = TheatricalNetworkMemberRole.byName(member.getStringOr("role", ""));
+            if (player == null || role == null) {
+                continue;
+            }
             members.add(new TheatricalNetworkMember(player, role));
         }
     }
@@ -33,7 +37,7 @@ public record NetworkMemberManager(Set<TheatricalNetworkMember> members) {
         ListTag membersList = new ListTag();
         for (TheatricalNetworkMember member : members) {
             CompoundTag memberTag = new CompoundTag();
-            memberTag.putUUID("player", member.playerId());
+            memberTag.store("player", UUIDUtil.CODEC, member.playerId());
             memberTag.putString("role", member.role().toString());
             membersList.add(memberTag);
         }

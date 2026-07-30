@@ -1,7 +1,8 @@
 {
   "credit": "Made with Blockbench",
   "textures": {
-    "2": "theatrical:block/light_side"
+    "2": "theatrical:block/light_side",
+    "particle": "theatrical:block/light_side"
   },
   "elements": [
     {

@@ -10,6 +10,7 @@ import dev.imabad.theatrical.net.OpenScreen;
 import dev.imabad.theatrical.util.UUIDUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,6 +18,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -29,8 +31,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
 public class RedstoneInterfaceBlock  extends Block implements EntityBlock {
-    public RedstoneInterfaceBlock() {
-        super(Properties.of()
+    public RedstoneInterfaceBlock(Properties properties) {
+        super(properties
                 .requiresCorrectToolForDrops()
                 .strength(3, 3)
                 .noOcclusion()
@@ -46,7 +48,8 @@ public class RedstoneInterfaceBlock  extends Block implements EntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useItemOn(ItemStack itemInHand, BlockState state, Level level, BlockPos pos,
+                                          Player player, InteractionHand hand, BlockHitResult hit) {
         if(!level.isClientSide()) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof RedstoneInterfaceBlockEntity redstoneInterfaceBlockEntity) {
@@ -56,26 +59,33 @@ public class RedstoneInterfaceBlock  extends Block implements EntityBlock {
                         return InteractionResult.FAIL;
                     }
                 }
-                if (player.getItemInHand(hand).getItem() == Items.CONFIGURATION_CARD.get()) {
-                    ItemStack itemInHand = player.getItemInHand(hand);
-                    CompoundTag tagData = itemInHand.getOrCreateTag();
-                    redstoneInterfaceBlockEntity.setNetworkId(tagData.getUUID("network"));
-                    if (tagData.getBoolean("universeEnabled")) {
-                        redstoneInterfaceBlockEntity.setUniverse(tagData.getInt("dmxUniverse"));
+                if (itemInHand.is(Items.CONFIGURATION_CARD.get())) {
+                    CompoundTag tagData = itemInHand.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+                    redstoneInterfaceBlockEntity.setNetworkId(tagData.read("network", net.minecraft.core.UUIDUtil.CODEC)
+                            .orElse(UUIDUtil.NULL));
+                    if (tagData.getBooleanOr("universeEnabled", false)) {
+                        redstoneInterfaceBlockEntity.setUniverse(tagData.getIntOr("dmxUniverse", 0));
                     }
-                    if (tagData.getBoolean("addressEnabled")) {
-                        redstoneInterfaceBlockEntity.setChannelStartPoint(tagData.getInt("dmxAddress"));
+                    if (tagData.getBooleanOr("addressEnabled", false)) {
+                        redstoneInterfaceBlockEntity.setChannelStartPoint(tagData.getIntOr("dmxAddress", 0));
                     }
-                    if (tagData.getBoolean("autoIncrement")) {
-                        tagData.putInt("dmxAddress", tagData.getInt("dmxAddress") + redstoneInterfaceBlockEntity.getChannelCount());
+                    if (tagData.getBooleanOr("autoIncrement", false)) {
+                        tagData.putInt("dmxAddress", tagData.getIntOr("dmxAddress", 0) + redstoneInterfaceBlockEntity.getChannelCount());
+                        CustomData.set(DataComponents.CUSTOM_DATA, itemInHand, tagData);
                     }
-                    itemInHand.save(tagData);
                     TheatricalNetworkData instance = TheatricalNetworkData.getInstance(level.getServer().overworld());
-                    player.sendSystemMessage(Component.translatable("item.configurationcard.success", instance.getNetwork(redstoneInterfaceBlockEntity.getNetworkId()).name(), Integer.toString(redstoneInterfaceBlockEntity.getUniverse()), Integer.toString(redstoneInterfaceBlockEntity.getChannelStart()), Integer.toString(tagData.getInt("dmxAddress"))));
+                    player.sendSystemMessage(Component.translatable("item.configurationcard.success", instance.getNetwork(redstoneInterfaceBlockEntity.getNetworkId()).name(), Integer.toString(redstoneInterfaceBlockEntity.getUniverse()), Integer.toString(redstoneInterfaceBlockEntity.getChannelStart()), Integer.toString(tagData.getIntOr("dmxAddress", 0))));
                     return InteractionResult.SUCCESS;
                 }
-                new OpenScreen(pos, TheatricalScreen.GENERIC_DMX).sendTo((ServerPlayer) player);
             }
+        }
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (!level.isClientSide()) {
+            new OpenScreen(pos, TheatricalScreen.GENERIC_DMX).sendTo((ServerPlayer) player);
         }
         return InteractionResult.SUCCESS;
     }
@@ -102,4 +112,3 @@ public class RedstoneInterfaceBlock  extends Block implements EntityBlock {
         return super.getDirectSignal(state, level, pos, direction);
     }
 }
-

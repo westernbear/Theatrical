@@ -7,7 +7,7 @@ import dev.imabad.theatrical.net.artnet.NotifyConsumerChange;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,7 +50,7 @@ public class NetworkDMXManager {
         universe.remove(pos);
         new NotifyConsumerChange(consumer.getUniverse(), NotifyConsumerChange.ChangeType.REMOVE,
                 new DMXDevice(consumer.getDeviceId(), 0, 0,0,
-                        0, "", new ResourceLocation("")))
+                        0, "", Identifier.withDefaultNamespace("air")))
                 .sendTo(knownSenders);
     }
     @Nullable

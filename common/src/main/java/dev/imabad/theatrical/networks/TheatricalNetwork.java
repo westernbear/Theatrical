@@ -2,6 +2,7 @@ package dev.imabad.theatrical.networks;
 
 import dev.imabad.theatrical.networks.members.NetworkMemberManager;
 import dev.imabad.theatrical.networks.members.TheatricalNetworkMember;
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 
 import java.util.*;
@@ -21,9 +22,10 @@ public class TheatricalNetwork {
         this.dmx = new NetworkDMXManager();
     }
     public TheatricalNetwork(CompoundTag data){
-        this.id = data.getUUID("id");
-        this.name = data.getString("name");
-        this.mode = TheatricalNetworkMode.valueOf(data.getString("mode"));
+        this.id = data.read("id", UUIDUtil.CODEC).orElseGet(UUID::randomUUID);
+        this.name = data.getStringOr("name", "Network");
+        this.mode = Optional.ofNullable(TheatricalNetworkMode.byName(data.getStringOr("mode", "")))
+                .orElse(TheatricalNetworkMode.PRIVATE);
         this.members = new NetworkMemberManager(data);
         this.dmx = new NetworkDMXManager();
     }
@@ -37,7 +39,7 @@ public class TheatricalNetwork {
 
     public CompoundTag save(){
         CompoundTag tag = new CompoundTag();
-        tag.putUUID("id", id);
+        tag.store("id", UUIDUtil.CODEC, id);
         tag.putString("mode", mode.toString());
         tag.putString("name", name);
         tag = members.save(tag);

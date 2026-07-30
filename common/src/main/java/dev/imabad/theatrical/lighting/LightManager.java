@@ -2,8 +2,6 @@ package dev.imabad.theatrical.lighting;
 
 import dev.imabad.theatrical.api.DynamicLightProvider;
 import dev.imabad.theatrical.blockentities.light.BaseLightBlockEntity;
-import dev.imabad.theatrical.compat.ModCompat;
-import dev.imabad.theatrical.compat.ShimmerCompat;
 import dev.imabad.theatrical.config.TheatricalConfig;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.client.Minecraft;
@@ -43,9 +41,6 @@ public class LightManager {
             return;
         lightSourcesLock.writeLock().lock();
         dynamicLightSources.add(lightSource);
-        if(ModCompat.SHIMMER){
-            ShimmerCompat.addLight(lightSource);
-        }
         lightSourcesLock.writeLock().unlock();
     }
 
@@ -95,12 +90,8 @@ public class LightManager {
             it = sourceIterator.next();
             if (it.equals(lightSource)) {
                 sourceIterator.remove();
-                if(ModCompat.SHIMMER){
-                    ShimmerCompat.removeLight(lightSource.getOwnerPos());
-                } else {
-                    if (Minecraft.getInstance().level != null)
-                        lightSource.scheduleTrackedChunksRebuild(Minecraft.getInstance().levelRenderer);
-                }
+                if (Minecraft.getInstance().level != null)
+                    lightSource.scheduleTrackedChunksRebuild(Minecraft.getInstance().levelRenderer);
                 break;
             }
         }
@@ -119,14 +110,8 @@ public class LightManager {
         while (sourceIterator.hasNext()) {
             it = sourceIterator.next();
             sourceIterator.remove();
-            if(ModCompat.SHIMMER){
-                ShimmerCompat.removeLight(it.getOwnerPos());
-            } else {
-                if (Minecraft.getInstance().levelRenderer != null) {
-                    if (it.getLightLuminance() > 0)
-                        it.resetLight();
-                    it.scheduleTrackedChunksRebuild(Minecraft.getInstance().levelRenderer);
-                }
+            if (Minecraft.getInstance().levelRenderer != null) {
+                it.scheduleTrackedChunksRebuild(Minecraft.getInstance().levelRenderer);
             }
         }
         LightManager.jarHoldingEntityList = new ArrayList<>();
@@ -157,7 +142,7 @@ public class LightManager {
 
     public static void scheduleChunkRebuild(@NotNull LevelRenderer renderer, int x, int y, int z) {
         if (Minecraft.getInstance().level != null)
-            renderer.setSectionDirty(x, y, z);
+            Minecraft.getInstance().level.setSectionDirtyWithNeighbors(x, y, z);
     }
 
     /**
@@ -215,7 +200,7 @@ public class LightManager {
             // lightmap is (skyLevel << 20 | blockLevel << 4)
 
             // Get vanilla block light level.
-            int blockLevel = getBlockLightNoPatch(lightmap);
+            int blockLevel = decodeBlockLight(lightmap);
             if (dynamicLightLevel > blockLevel) {
                 // Equivalent to a << 4 bitshift with a little quirk: this one ensure more precision (more decimals are saved).
                 int luminance = (int) (dynamicLightLevel * 16.0);
@@ -227,7 +212,7 @@ public class LightManager {
         return lightmap;
     }
 
-    public static int getBlockLightNoPatch(int light) { // Reverts the forge patch to LightTexture.block
+    public static int decodeBlockLight(int light) {
         return light >> 4 & '\uffff';
     }
 
@@ -297,14 +282,6 @@ public class LightManager {
     }
 
     public static boolean shouldUpdateDynamicLight() {
-        return shouldUpdateDynamicLight(false);
-    }
-
-
-    public static boolean shouldUpdateDynamicLight(boolean checkShimmer) {
-        if(checkShimmer && ModCompat.SHIMMER){
-            return false;
-        }
         return TheatricalConfig.INSTANCE.COMMON.shouldEmitLight;
     }
 
@@ -317,18 +294,8 @@ public class LightManager {
             light.setPrevEmissionBlock(emissionBlock);
             light.setPrevLuminance(luminance);
             light.setPrevSpread(spread);
-            if(ModCompat.SHIMMER){
-                ShimmerCompat.handleLightUpdate(light);
-            } else {
-                theatricalLightHandler(light, renderer, luminance, emissionBlock);
-            }
+            theatricalLightHandler(light, renderer, luminance, emissionBlock);
             return true;
-        } else if(ModCompat.SHIMMER){
-            if(light.getPrevColour() != light.getLightColour() || light.getPrevSpread() != light.getLightSpread()){
-                light.setPrevColour(light.getLightColour());
-                light.setPrevSpread(light.getLightSpread());
-                ShimmerCompat.handleLightUpdate(light);
-            }
         }
         return false;
     }
@@ -337,8 +304,8 @@ public class LightManager {
         var newPos = new LongOpenHashSet();
 
         if (luminance > 0) {
-            var entityChunkPos = new ChunkPos(emissionBlock);
-            var chunkPos = new BlockPos.MutableBlockPos(entityChunkPos.x, LambDynamicLightUtil.getSectionCoord(emissionBlock.getY()), entityChunkPos.z);
+            var entityChunkPos = ChunkPos.containing(emissionBlock);
+            var chunkPos = new BlockPos.MutableBlockPos(entityChunkPos.x(), LambDynamicLightUtil.getSectionCoord(emissionBlock.getY()), entityChunkPos.z());
 
             LightManager.scheduleChunkRebuild(renderer, chunkPos);
             LightManager.updateTrackedChunks(chunkPos, light.getTrackedLitChunkPos(), newPos);

@@ -4,7 +4,7 @@ import dev.architectury.platform.Platform;
 import dev.architectury.utils.Env;
 import dev.imabad.theatrical.Theatrical;
 import dev.imabad.theatrical.config.api.TheatricalConfigItem;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.Nullable;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -41,7 +41,7 @@ public class ConfigHandler {
     private final Path configFolder;
     private final Yaml yaml;
 
-    private final Map<ResourceLocation, BaseConfig> registered_configs = new HashMap<>();
+    private final Map<Identifier, BaseConfig> registered_configs = new HashMap<>();
 
     private ConfigHandler(Path configFolder){
         this.configFolder = configFolder;
@@ -70,7 +70,7 @@ public class ConfigHandler {
             } else {
                 save(config, sideConfig);
             }
-            ResourceLocation location = new ResourceLocation(modID, side.name().toLowerCase(Locale.ENGLISH));
+            Identifier location = Identifier.fromNamespaceAndPath(modID, side.name().toLowerCase(Locale.ENGLISH));
             registered_configs.put(location, config);
             return config;
         }
@@ -78,7 +78,7 @@ public class ConfigHandler {
     }
 
     public void saveConfig(ConfigSide configSide){
-        ResourceLocation resourceLocation = new ResourceLocation(Theatrical.MOD_ID, configSide.name().toLowerCase(Locale.ENGLISH));
+        Identifier resourceLocation = Identifier.fromNamespaceAndPath(Theatrical.MOD_ID, configSide.name().toLowerCase(Locale.ENGLISH));
         File sideConfig = Paths.get(this.configFolder.toString(), Theatrical.MOD_ID + "-" + configSide.name().toLowerCase(Locale.ENGLISH) + ".yml").toFile();
         save(registered_configs.get(resourceLocation), sideConfig);
     }

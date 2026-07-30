@@ -19,9 +19,6 @@ public class TheatricalConfig {
     }
 
     public static class ClientConfig extends BaseConfig{
-        @TheatricalConfigItem(minValue = "0", maxValue = "1")
-        public double beamOpacity = 0.4;
-
         @TheatricalConfigItem(minValue = "0")
         public int renderDistance = 64;
 

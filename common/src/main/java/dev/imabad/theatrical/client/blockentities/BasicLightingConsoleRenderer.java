@@ -2,144 +2,107 @@ package dev.imabad.theatrical.client.blockentities;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
 import dev.imabad.theatrical.blockentities.control.BasicLightingDeskBlockEntity;
 import dev.imabad.theatrical.client.TheatricalRenderTypes;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.Direction;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import org.joml.Matrix4f;
+import net.minecraft.world.phys.Vec3;
 
-public class BasicLightingConsoleRenderer implements BlockEntityRenderer<BasicLightingDeskBlockEntity> {
+public final class BasicLightingConsoleRenderer
+        implements BlockEntityRenderer<BasicLightingDeskBlockEntity, BasicLightingConsoleRenderer.State> {
     public BasicLightingConsoleRenderer(BlockEntityRendererProvider.Context context) {
     }
 
-
-    public float convertByteToInt(byte val) {
-        return Byte.toUnsignedInt(val);
-    }
     @Override
-    public void render(BasicLightingDeskBlockEntity blockEntity, float partialTick, PoseStack poseStack, MultiBufferSource buffer, int packedLight, int packedOverlay) {
+    public State createRenderState() {
+        return new State();
+    }
+
+    @Override
+    public void extractRenderState(BasicLightingDeskBlockEntity blockEntity, State state, float partialTick,
+                                   Vec3 cameraPos, ModelFeatureRenderer.CrumblingOverlay breakProgress) {
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTick, cameraPos, breakProgress);
+        state.faders = blockEntity.getFaders().clone();
+        state.grandMaster = blockEntity.getGrandMaster();
+        state.facing = blockEntity.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
+    }
+
+    @Override
+    public void submit(State state, PoseStack poseStack, SubmitNodeCollector submitNodeCollector,
+                       CameraRenderState cameraRenderState) {
         poseStack.pushPose();
-        BlockState blockState = blockEntity.getBlockState();
-        Direction blockDirection = blockState.getValue(BlockStateProperties.HORIZONTAL_FACING);
         poseStack.translate(0.5, 0.5, 0.5);
-        if(blockDirection.getAxis() == Direction.Axis.X){
-            blockDirection = blockDirection.getOpposite();
-        }
-        poseStack.mulPose(Axis.YP.rotationDegrees(blockDirection.toYRot())); //idk what this is
+        Direction direction = state.facing.getAxis() == Direction.Axis.X ? state.facing.getOpposite() : state.facing;
+        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(direction.toYRot()));
         poseStack.translate(-0.5, -0.5, -0.5);
-        double startX = 1.5;
-        byte[] faders = blockEntity.getFaders();
-        VertexConsumer linesVertexBuilder = buffer.getBuffer(RenderType.lines());
-        for(int i = 0; i < faders.length; i++){
-            double baseY = 5.4;
-            if(i >= 6){
-                baseY += (i / 6) * 7;
+
+        submitNodeCollector.submitCustomGeometry(poseStack, RenderTypes.lines(), (pose, builder) -> {
+            for (int i = 0; i < state.faders.length; i++) {
+                addTrack(builder, pose, faderX(i), faderBaseY(i));
             }
-            int faderNumber = i - ((i / 6) * 6);
-            renderLine(poseStack, startX + (faderNumber * 1.2), baseY, linesVertexBuilder);
-        }
-        renderLine(poseStack, 14.5, 5.4, linesVertexBuilder);
-        VertexConsumer iVertexBuilder = buffer.getBuffer(TheatricalRenderTypes.FADER);
-        for(int i = 0; i < faders.length; i++){
-            double baseY = 5.4;
-            if(i >= 6){
-                baseY += (i / 6) * 7;
+            addTrack(builder, pose, 14.5, 5.4);
+        });
+        submitNodeCollector.submitCustomGeometry(poseStack, TheatricalRenderTypes.FADER, (pose, builder) -> {
+            for (int i = 0; i < state.faders.length; i++) {
+                addFader(builder, pose, faderX(i), faderBaseY(i), Byte.toUnsignedInt(state.faders[i]));
             }
-            int faderNumber = i - ((i / 6) * 6);
-            renderFader(poseStack, startX + (faderNumber * 1.2), baseY, -((convertByteToInt(faders[i]) / 255) * 3), iVertexBuilder);
-        }
-        renderFader(poseStack, 14.5, 5.4, -((convertByteToInt(blockEntity.getGrandMaster()) / 255) * 3), iVertexBuilder);
-//        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-//        renderStep(poseStack, blockEntity, buffer, packedLight);
-//        renderCurrentMode(poseStack, blockEntity, buffer, packedLight);
+            addFader(builder, pose, 14.5, 5.4, Byte.toUnsignedInt(state.grandMaster));
+        });
         poseStack.popPose();
     }
-    public void renderStep(PoseStack stack, BasicLightingDeskBlockEntity tileEntityBasicLightingControl, MultiBufferSource buffer,  int combinedLightIn){
-        stack.pushPose();
-//        FontRenderer fontrenderer = this.renderDispatcher.getFontRenderer();
-        Font font = Minecraft.getInstance().font;
-        stack.translate(10.7 /16D, 3 /16D, 9.3 / 16D);
-        stack.scale(0.005F, -0.005F, 0.005F);
-        stack.mulPose(Axis.XP.rotationDegrees(90F));
-        font.drawInBatch("STEP", 0 , 0, -1, false, stack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0, combinedLightIn);
-//        fontrenderer.drawString(stack,"Step: " + tileEntityBasicLightingControl.getCurrentStep(), 0, 0, 0x000000);
-        stack.popPose();
+
+    private static double faderX(int index) {
+        return 1.5 + (index % 6) * 1.2;
     }
 
-    public void renderCurrentMode(PoseStack stack, BasicLightingDeskBlockEntity tileEntityBasicLightingControl, MultiBufferSource buffer, int combinedLightIn){
-        stack.pushPose();
-//        FontRenderer fontrenderer = this.renderDispatcher.getFontRenderer();
-        Font font = Minecraft.getInstance().font;
-        stack.translate(10.4 /16D, 3 /16D, 8.3 / 16D);
-        stack.scale(0.003F, -0.003F, 0.003F);
-        stack.mulPose(Axis.XP.rotationDegrees(90F));
-        font.drawInBatch(tileEntityBasicLightingControl.isRunMode() ? "Run mode" : "Program mode", 0 , 0, 0x000000, false, stack.last().pose(), buffer, Font.DisplayMode.NORMAL, 0x000000, combinedLightIn);
-//        fontrenderer.drawString(stack,"Step: " + tileEntityBasicLightingControl.getCurrentStep(), 0, 0, 0x000000);
-        stack.popPose();
+    private static double faderBaseY(int index) {
+        return 5.4 + (index / 6) * 7;
     }
 
-
-    public void renderLine(PoseStack stack, double x, double y, VertexConsumer vertexBuilder){
-        stack.pushPose();
-        Matrix4f m = stack.last().pose();
-        stack.translate(x / 16D, 3 / 16D,  y / 16D);
-        vertexBuilder.vertex(m, 0, 0, 0).color(0, 0, 0, 255).normal(0, 0, 0).endVertex();
-        vertexBuilder.vertex(m, 0, 0, -(3 / 16F)).color(0, 0, 0, 255).normal(0, 0, 0).endVertex();
-        stack.popPose();
+    private static void addTrack(VertexConsumer builder, PoseStack.Pose pose, double x, double z) {
+        builder.addVertex(pose, (float) (x / 16), 3 / 16f, (float) (z / 16))
+                .setColor(0, 0, 0, 255).setNormal(pose, 0, 1, 0).setLineWidth(1);
+        builder.addVertex(pose, (float) (x / 16), 3 / 16f, (float) ((z - 3) / 16))
+                .setColor(0, 0, 0, 255).setNormal(pose, 0, 1, 0).setLineWidth(1);
     }
 
-    public void renderFader(PoseStack stack, double x, double baseY, double faderY, VertexConsumer builder){
-        stack.pushPose();
-        Matrix4f m = stack.last().pose();
-        float height = 0.4F / 16F;
-        float width = 0.6F / 16F;
+    private static void addFader(VertexConsumer builder, PoseStack.Pose pose, double x, double baseZ, int value) {
+        float height = 0.4f / 16;
+        float width = 0.6f / 16;
+        float minX = (float) (x / 16) - width / 2;
+        float minY = 3 / 16f;
+        float minZ = (float) ((baseZ - value / 255f * 3) / 16);
+        float maxX = minX + width;
+        float maxY = minY + height;
+        float maxZ = minZ + width;
 
-        stack.translate((x / 16D) - width / 2, 3 / 16D, (baseY + faderY) / 16D);
+        quad(builder, pose, maxX, maxY, minZ, maxX, maxY, maxZ, maxX, minY, maxZ, maxX, minY, minZ);
+        quad(builder, pose, minX, minY, maxZ, maxX, minY, maxZ, maxX, maxY, maxZ, minX, maxY, maxZ);
+        quad(builder, pose, minX, minY, minZ, minX, minY, maxZ, minX, maxY, maxZ, minX, maxY, minZ);
+        quad(builder, pose, minX, maxY, minZ, maxX, maxY, minZ, maxX, minY, minZ, minX, minY, minZ);
+        quad(builder, pose, maxX, minY, minZ, maxX, minY, maxZ, minX, minY, maxZ, minX, minY, minZ);
+        quad(builder, pose, minX, maxY, minZ, minX, maxY, maxZ, maxX, maxY, maxZ, maxX, maxY, minZ);
+    }
 
-        //right
-        builder.vertex(m, width, height, 0).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, height, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, 0, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, 0, 0).color(0, 0, 0,255).endVertex();
+    private static void quad(VertexConsumer builder, PoseStack.Pose pose,
+                             float x1, float y1, float z1, float x2, float y2, float z2,
+                             float x3, float y3, float z3, float x4, float y4, float z4) {
+        builder.addVertex(pose, x1, y1, z1).setColor(0, 0, 0, 255);
+        builder.addVertex(pose, x2, y2, z2).setColor(0, 0, 0, 255);
+        builder.addVertex(pose, x3, y3, z3).setColor(0, 0, 0, 255);
+        builder.addVertex(pose, x4, y4, z4).setColor(0, 0, 0, 255);
+    }
 
-        //front
-        builder.vertex(m, 0, 0, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, 0, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, height, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, 0, height, width).color(0, 0, 0,255).endVertex();
-
-        //left
-        builder.vertex(m, 0, 0, 0).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, 0, 0, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, 0, height, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, 0, height, 0).color(0, 0, 0,255).endVertex();
-
-        //back
-        builder.vertex(m, 0, height, 0).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, height, 0).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, 0, 0).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, 0, 0, 0).color(0, 0, 0,255).endVertex();
-
-        //bottom
-        builder.vertex(m, width, 0, 0).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, 0, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, 0, 0, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, 0, 0, 0).color(0, 0, 0,255).endVertex();
-
-        //Top
-        builder.vertex(m, 0, height, 0).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, 0, height, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, height, width).color(0, 0, 0,255).endVertex();
-        builder.vertex(m, width, height, 0).color(0, 0, 0,255).endVertex();
-
-        stack.popPose();
+    public static final class State extends BlockEntityRenderState {
+        byte[] faders = new byte[0];
+        byte grandMaster;
+        Direction facing = Direction.NORTH;
     }
 }

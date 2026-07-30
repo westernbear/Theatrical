@@ -1,8 +1,8 @@
 package dev.imabad.theatrical.net;
 
 import dev.architectury.networking.NetworkManager;
-import dev.architectury.networking.simple.BaseC2SMessage;
-import dev.architectury.networking.simple.MessageType;
+import dev.imabad.theatrical.net.TheatricalNet.BaseC2SMessage;
+import dev.imabad.theatrical.net.TheatricalNet.MessageType;
 import dev.imabad.theatrical.blockentities.light.BaseLightBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -44,6 +44,7 @@ public class UpdateFixturePosition extends BaseC2SMessage {
         if(be instanceof BaseLightBlockEntity baseLightBlockEntity){
             baseLightBlockEntity.setPan(pan);
             baseLightBlockEntity.setTilt(tilt);
+            baseLightBlockEntity.markAsDirty();
         }
     }
 }

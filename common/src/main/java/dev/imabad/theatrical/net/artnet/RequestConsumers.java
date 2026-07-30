@@ -1,8 +1,8 @@
 package dev.imabad.theatrical.net.artnet;
 
 import dev.architectury.networking.NetworkManager;
-import dev.architectury.networking.simple.BaseC2SMessage;
-import dev.architectury.networking.simple.MessageType;
+import dev.imabad.theatrical.net.TheatricalNet.BaseC2SMessage;
+import dev.imabad.theatrical.net.TheatricalNet.MessageType;
 import dev.imabad.theatrical.Theatrical;
 import dev.imabad.theatrical.api.dmx.DMXConsumer;
 import dev.imabad.theatrical.dmx.DMXDevice;

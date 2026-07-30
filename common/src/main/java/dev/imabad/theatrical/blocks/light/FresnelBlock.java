@@ -1,5 +1,6 @@
 package dev.imabad.theatrical.blocks.light;
 
+import com.mojang.serialization.MapCodec;
 import dev.imabad.theatrical.TheatricalClient;
 import dev.imabad.theatrical.TheatricalScreen;
 import dev.imabad.theatrical.blockentities.BlockEntities;
@@ -35,8 +36,9 @@ import org.jetbrains.annotations.Nullable;
 
 public class FresnelBlock extends BaseFocusableLightBlock {
 
-    public FresnelBlock() {
-        super(Properties.of()
+    private static final MapCodec<FresnelBlock> CODEC = simpleCodec(FresnelBlock::new);
+    public FresnelBlock(Properties properties) {
+        super(properties
                 .requiresCorrectToolForDrops()
                 .strength(3, 3)
                 .noOcclusion()
@@ -44,6 +46,11 @@ public class FresnelBlock extends BaseFocusableLightBlock {
                 .mapColor(MapColor.METAL)
                 .sound(SoundType.METAL)
                 .pushReaction(PushReaction.DESTROY));
+    }
+
+    @Override
+    protected MapCodec<FresnelBlock> codec() {
+        return CODEC;
     }
     @Nullable
     @Override
@@ -108,23 +115,20 @@ public class FresnelBlock extends BaseFocusableLightBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        InteractionResult superResult = super.use(state, level, pos, player, hand, hit);
-        if(superResult == InteractionResult.PASS) {
-            if (!level.isClientSide) {
-                new OpenScreen(pos, TheatricalScreen.GENERIC_PAN_TILT).sendTo((ServerPlayer) player);
-            } else {
-                if (player.isCrouching()) {
-                    if (TheatricalClient.DEBUG_BLOCKS.contains(pos)) {
-                        TheatricalClient.DEBUG_BLOCKS.remove(pos);
-                    } else {
-                        TheatricalClient.DEBUG_BLOCKS.add(pos);
-                    }
-                    return InteractionResult.SUCCESS;
-                }
-            }
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (!level.isClientSide()) {
+            new OpenScreen(pos, TheatricalScreen.GENERIC_PAN_TILT).sendTo((ServerPlayer) player);
+            return InteractionResult.SUCCESS;
         }
-        return superResult;
+        if (player.isCrouching()) {
+            if (TheatricalClient.DEBUG_BLOCKS.contains(pos)) {
+                TheatricalClient.DEBUG_BLOCKS.remove(pos);
+            } else {
+                TheatricalClient.DEBUG_BLOCKS.add(pos);
+                }
+            return InteractionResult.SUCCESS;
+        }
+        return InteractionResult.PASS;
     }
 
     @Override

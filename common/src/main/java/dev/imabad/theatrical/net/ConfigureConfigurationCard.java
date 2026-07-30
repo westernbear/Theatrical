@@ -1,14 +1,15 @@
 package dev.imabad.theatrical.net;
 
 import dev.architectury.networking.NetworkManager;
-import dev.architectury.networking.simple.BaseC2SMessage;
-import dev.architectury.networking.simple.MessageType;
+import dev.imabad.theatrical.net.TheatricalNet.BaseC2SMessage;
+import dev.imabad.theatrical.net.TheatricalNet.MessageType;
 import dev.imabad.theatrical.items.Items;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 
 import java.util.UUID;
 
@@ -65,14 +66,14 @@ public class ConfigureConfigurationCard extends BaseC2SMessage {
                 itemStack = player.getItemInHand(InteractionHand.OFF_HAND);
             }
             if(itemStack != null){
-                CompoundTag dataTag = itemStack.getOrCreateTag();
-                dataTag.putUUID("network", network);
-                dataTag.putInt("dmxUniverse", dmxUniverse);
-                dataTag.putInt("dmxAddress", dmxAddress);
-                dataTag.putBoolean("autoIncrement", autoIncrement);
-                dataTag.putBoolean("universeEnabled", universeEnabled);
-                dataTag.putBoolean("addressEnabled", addressEnabled);
-                itemStack.save(dataTag);
+                CustomData.update(DataComponents.CUSTOM_DATA, itemStack, dataTag -> {
+                    dataTag.putIntArray("network", net.minecraft.core.UUIDUtil.uuidToIntArray(network));
+                    dataTag.putInt("dmxUniverse", dmxUniverse);
+                    dataTag.putInt("dmxAddress", dmxAddress);
+                    dataTag.putBoolean("autoIncrement", autoIncrement);
+                    dataTag.putBoolean("universeEnabled", universeEnabled);
+                    dataTag.putBoolean("addressEnabled", addressEnabled);
+                });
             }
         });
     }

@@ -8,24 +8,23 @@ import dev.imabad.theatrical.client.gui.widgets.LabeledEditBox;
 import dev.imabad.theatrical.net.UpdateDMXFixture;
 import dev.imabad.theatrical.net.UpdateNetworkId;
 import dev.imabad.theatrical.util.UUIDUtil;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class GenericDMXConfigurationScreen<T extends DMXConsumer> extends Screen {
-    private final ResourceLocation GUI = new ResourceLocation(Theatrical.MOD_ID, "textures/gui/blank.png");
+    private final Identifier GUI = Identifier.fromNamespaceAndPath(Theatrical.MOD_ID, "textures/gui/blank.png");
 
     protected final int imageWidth;
     protected final int imageHeight;
@@ -64,16 +63,15 @@ public class GenericDMXConfigurationScreen<T extends DMXConsumer> extends Screen
         this.dmxUniverse.setValue(Integer.toString(this.be.getUniverse()));
         layout.addChild(dmxUniverse);
         addExtraWidgetsToUI();
-        layout.addChild(new CycleButton.Builder<UUID>((networkId) ->
+        layout.addChild(CycleButton.builder((UUID networkId) ->
         {
             if (TheatricalClient.getArtNetManager().getKnownNetworks().containsKey(networkId)) {
                 return Component.literal(TheatricalClient.getArtNetManager().getKnownNetworks().get(networkId));
             }
             return Component.literal("Unknown");
-        }
-        ).withValues(CycleButton.ValueListSupplier.create(Stream.concat(Stream.of(UUIDUtil.NULL),
+        }, networkId).withValues(CycleButton.ValueListSupplier.create(Stream.concat(Stream.of(UUIDUtil.NULL),
                         TheatricalClient.getArtNetManager().getKnownNetworks().keySet().stream()).collect(Collectors.toList())))
-                .displayOnlyValue().withInitialValue(networkId)
+                .displayOnlyValue()
                 .create(xCenter, yCenter, 150, 20,
                         Component.translatable("screen.artnetconfig.network"), (obj, val) -> {
                             this.networkId = val;
@@ -117,37 +115,19 @@ public class GenericDMXConfigurationScreen<T extends DMXConsumer> extends Screen
         }
     }
     @Override
-    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-        this.renderWindow(guiGraphics);
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(graphics, mouseX, mouseY, partialTick);
+        this.extractWindow(graphics);
     }
 
-    @Override
-    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-        this.renderLabels(guiGraphics);
-    }
-
-    private void renderWindow(GuiGraphics guiGraphics){
+    private void extractWindow(GuiGraphicsExtractor graphics){
         int layoutHeight = 0;
         if(layout != null) {
             layoutHeight = layout.getHeight();
         }
         int relX = (this.width - this.imageWidth) / 2;
         int relY = (this.height - layoutHeight) / 2;
-        guiGraphics.blit(GUI, relX, relY, imageWidth, layoutHeight, 0, 0, this.imageWidth, this.imageHeight, 256,256);
-    }
-
-    protected void renderLabels(GuiGraphics guiGraphics) {
-//        renderLabel(guiGraphics, titleTranslationKey, 5,5);
-//        renderLabel(guiGraphics, "fixture.dmxStart", 0,15);
-//        renderLabel(guiGraphics, "artneti.dmxUniverse", 0,40);
-//        renderLabel(guiGraphics, "artneti.network", 0,60);
-    }
-
-    protected void renderLabel(GuiGraphics guiGraphics, String translationKey, int offSetX, int offSetY){
-        MutableComponent translatable = Component.translatable(translationKey);
-        guiGraphics.drawString(font, translatable, xCenter + (this.imageWidth / 2) - (this.font.width(translatable.getString()) / 2), yCenter + offSetY, 0x404040, false);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, GUI, relX, relY, 0, 0, imageWidth, layoutHeight, this.imageWidth, this.imageHeight, 256, 256);
     }
 
     @Override

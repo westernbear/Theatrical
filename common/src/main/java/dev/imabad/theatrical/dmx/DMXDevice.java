@@ -1,16 +1,16 @@
 package dev.imabad.theatrical.dmx;
 
 import ch.bildspur.artnet.rdm.RDMDeviceId;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class DMXDevice {
 
     private RDMDeviceId deviceId;
     private int dmxStartAddress, dmxChannelCount, deviceTypeId, activePersonality;
     private String modelName;
-    private ResourceLocation fixtureID;
+    private Identifier fixtureID;
 
-    public DMXDevice(RDMDeviceId deviceId, int dmxStartAddress, int dmxChannelCount, int deviceTypeId, int activePersonality, String modelName, ResourceLocation fixtureID) {
+    public DMXDevice(RDMDeviceId deviceId, int dmxStartAddress, int dmxChannelCount, int deviceTypeId, int activePersonality, String modelName, Identifier fixtureID) {
         this.deviceId = deviceId;
         this.dmxStartAddress = dmxStartAddress;
         this.dmxChannelCount = dmxChannelCount;
@@ -56,7 +56,7 @@ public class DMXDevice {
         return activePersonality;
     }
 
-    public ResourceLocation getFixtureID() {
+    public Identifier getFixtureID() {
         return fixtureID;
     }
 
@@ -64,7 +64,7 @@ public class DMXDevice {
         this.activePersonality = activePersonality;
     }
 
-    public void setFixtureID(ResourceLocation fixtureID) {
+    public void setFixtureID(Identifier fixtureID) {
         this.fixtureID = fixtureID;
     }
 

@@ -1,15 +1,20 @@
 package dev.imabad.theatrical.networks;
 
+import com.mojang.serialization.Codec;
 import dev.architectury.utils.GameInstance;
+import dev.imabad.theatrical.Theatrical;
 import dev.imabad.theatrical.net.artnet.NotifyNetworks;
 import dev.imabad.theatrical.networks.members.TheatricalNetworkMemberRole;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -19,10 +24,15 @@ public class TheatricalNetworkData extends SavedData {
     private final Set<ServerPlayer> knownSenders = new HashSet<>();
     private final Map<UUID, TheatricalNetwork> networks = new HashMap<>();
     private static final String KEY = "dmx_networks";
-    private static final SavedData.Factory<TheatricalNetworkData> factory = new Factory<>(
-            TheatricalNetworkData::new,
+    private static final Codec<TheatricalNetworkData> CODEC = CompoundTag.CODEC.xmap(
             TheatricalNetworkData::read,
-            null
+            TheatricalNetworkData::save
+    );
+    private static final SavedDataType<TheatricalNetworkData> TYPE = new SavedDataType<>(
+            Identifier.withDefaultNamespace(KEY),
+            TheatricalNetworkData::new,
+            CODEC,
+            DataFixTypes.SAVED_DATA_COMMAND_STORAGE
     );
 
     private static TheatricalNetworkData INSTANCE;
@@ -34,7 +44,7 @@ public class TheatricalNetworkData extends SavedData {
     public static TheatricalNetworkData getInstance(Level level){
         if(INSTANCE == null){
             INSTANCE = level.getServer()
-                    .overworld().getDataStorage().computeIfAbsent(factory, KEY);
+                    .overworld().getDataStorage().computeIfAbsent(TYPE);
         }
         return INSTANCE;
     }
@@ -42,7 +52,7 @@ public class TheatricalNetworkData extends SavedData {
     public static TheatricalNetworkData getInstance(){
         if(INSTANCE == null){
             INSTANCE = GameInstance.getServer().overworld().getDataStorage()
-                    .computeIfAbsent(factory, KEY);
+                    .computeIfAbsent(TYPE);
         }
         return INSTANCE;
     }
@@ -101,7 +111,7 @@ public class TheatricalNetworkData extends SavedData {
 
     public static TheatricalNetworkData read(CompoundTag tag) {
         TheatricalNetworkData data = new TheatricalNetworkData();
-        ListTag networksTag = tag.getList("networks", Tag.TAG_COMPOUND);
+        ListTag networksTag = tag.getListOrEmpty("networks");
         for (Tag networkTag : networksTag) {
             TheatricalNetwork network = new TheatricalNetwork((CompoundTag) networkTag);
             data.networks.put(network.id(), network);
@@ -109,8 +119,8 @@ public class TheatricalNetworkData extends SavedData {
         return data;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag compoundTag) {
+    public CompoundTag save() {
+        CompoundTag compoundTag = new CompoundTag();
         ListTag networksTag = new ListTag();
         for (TheatricalNetwork value : networks.values()) {
             networksTag.add(value.save());

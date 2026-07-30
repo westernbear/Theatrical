@@ -8,6 +8,7 @@ import dev.imabad.theatrical.networks.TheatricalNetworkData;
 import dev.imabad.theatrical.items.Items;
 import dev.imabad.theatrical.util.UUIDUtil;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,6 +17,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.EntityBlock;
@@ -36,7 +38,7 @@ public abstract class BaseLightBlock extends HangableBlock implements EntityBloc
 
     @Override
     public RenderShape getRenderShape(BlockState blockState) {
-        return RenderShape.ENTITYBLOCK_ANIMATED;
+        return RenderShape.INVISIBLE;
     }
 
     @Override
@@ -45,7 +47,7 @@ public abstract class BaseLightBlock extends HangableBlock implements EntityBloc
     }
 
     @Override
-    public boolean propagatesSkylightDown(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos) {
+    public boolean propagatesSkylightDown(BlockState blockState) {
         return true;
     }
 
@@ -62,7 +64,7 @@ public abstract class BaseLightBlock extends HangableBlock implements EntityBloc
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if(!level.isClientSide){
+        if(!level.isClientSide()){
             BlockEntity be = level.getBlockEntity(pos);
             if(be instanceof BaseDMXConsumerLightBlockEntity consumerLightBlockEntity && placer instanceof ServerPlayer player){
                 consumerLightBlockEntity.setNetworkId(TheatricalNetworkData.getInstance(level.getServer().overworld()).getDefaultNetworkForPlayer(player).id());
@@ -71,7 +73,8 @@ public abstract class BaseLightBlock extends HangableBlock implements EntityBloc
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useItemOn(ItemStack itemInHand, BlockState state, Level level, BlockPos pos,
+                                          Player player, InteractionHand hand, BlockHitResult hit) {
         BlockEntity be = level.getBlockEntity(pos);
         if(!level.isClientSide()) {
             if (be instanceof BaseDMXConsumerLightBlockEntity consumerLightBlockEntity) {
@@ -81,27 +84,26 @@ public abstract class BaseLightBlock extends HangableBlock implements EntityBloc
                         return InteractionResult.FAIL;
                     }
                 }
-                if (player.getItemInHand(hand).getItem() == Items.CONFIGURATION_CARD.get()) {
-                    ItemStack itemInHand = player.getItemInHand(hand);
-                    CompoundTag tagData = itemInHand.getOrCreateTag();
-                    consumerLightBlockEntity.setNetworkId(tagData.getUUID("network"));
-                    if (tagData.getBoolean("universeEnabled")) {
-                        consumerLightBlockEntity.setUniverse(tagData.getInt("dmxUniverse"));
+                if (itemInHand.is(Items.CONFIGURATION_CARD.get())) {
+                    CompoundTag tagData = itemInHand.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
+                    consumerLightBlockEntity.setNetworkId(tagData.read("network", net.minecraft.core.UUIDUtil.CODEC)
+                            .orElse(UUIDUtil.NULL));
+                    if (tagData.getBooleanOr("universeEnabled", false)) {
+                        consumerLightBlockEntity.setUniverse(tagData.getIntOr("dmxUniverse", 0));
                     }
-                    if (tagData.getBoolean("addressEnabled")) {
-                        consumerLightBlockEntity.setChannelStartPoint(tagData.getInt("dmxAddress"));
+                    if (tagData.getBooleanOr("addressEnabled", false)) {
+                        consumerLightBlockEntity.setChannelStartPoint(tagData.getIntOr("dmxAddress", 0));
                     }
-                    if (tagData.getBoolean("autoIncrement")) {
-                        tagData.putInt("dmxAddress", tagData.getInt("dmxAddress") + consumerLightBlockEntity.getChannelCount());
+                    if (tagData.getBooleanOr("autoIncrement", false)) {
+                        tagData.putInt("dmxAddress", tagData.getIntOr("dmxAddress", 0) + consumerLightBlockEntity.getChannelCount());
+                        CustomData.set(DataComponents.CUSTOM_DATA, itemInHand, tagData);
                     }
-                    itemInHand.save(tagData);
                     TheatricalNetworkData instance = TheatricalNetworkData.getInstance(level.getServer().overworld());
-                    player.sendSystemMessage(Component.translatable("item.configurationcard.success", instance.getNetwork(consumerLightBlockEntity.getNetworkId()).name(), Integer.toString(consumerLightBlockEntity.getUniverse()), Integer.toString(consumerLightBlockEntity.getChannelStart()), Integer.toString(tagData.getInt("dmxAddress"))));
+                    player.sendSystemMessage(Component.translatable("item.configurationcard.success", instance.getNetwork(consumerLightBlockEntity.getNetworkId()).name(), Integer.toString(consumerLightBlockEntity.getUniverse()), Integer.toString(consumerLightBlockEntity.getChannelStart()), Integer.toString(tagData.getIntOr("dmxAddress", 0))));
                     return InteractionResult.SUCCESS;
                 }
-                return InteractionResult.PASS;
             }
         }
-        return super.use(state, level, pos, player, hand, hit);
+        return InteractionResult.TRY_WITH_EMPTY_HAND;
     }
 }

@@ -2,8 +2,8 @@ package dev.imabad.theatrical.net.artnet;
 
 import ch.bildspur.artnet.rdm.RDMDeviceId;
 import dev.architectury.networking.NetworkManager;
-import dev.architectury.networking.simple.BaseS2CMessage;
-import dev.architectury.networking.simple.MessageType;
+import dev.imabad.theatrical.net.TheatricalNet.BaseS2CMessage;
+import dev.imabad.theatrical.net.TheatricalNet.MessageType;
 import dev.imabad.theatrical.TheatricalClient;
 import dev.imabad.theatrical.dmx.DMXDevice;
 import dev.imabad.theatrical.net.TheatricalNet;
@@ -29,7 +29,7 @@ public class ListConsumers extends BaseS2CMessage {
         dmxDevices = new ArrayList<>();
         for(int i = 0; i < count; i++){
             dmxDevices.add(new DMXDevice(new RDMDeviceId(buf.readByteArray(6)), buf.readInt(), buf.readInt(),
-                    buf.readInt(), buf.readInt(), buf.readUtf(), buf.readResourceLocation()));
+                    buf.readInt(), buf.readInt(), buf.readUtf(), buf.readIdentifier()));
         }
     }
 
@@ -49,7 +49,7 @@ public class ListConsumers extends BaseS2CMessage {
             buf.writeInt(dmxDevice.getDeviceTypeId());
             buf.writeInt(dmxDevice.getActivePersonality());
             buf.writeUtf(dmxDevice.getModelName());
-            buf.writeResourceLocation(dmxDevice.getFixtureID());
+            buf.writeIdentifier(dmxDevice.getFixtureID());
         }
     }
 

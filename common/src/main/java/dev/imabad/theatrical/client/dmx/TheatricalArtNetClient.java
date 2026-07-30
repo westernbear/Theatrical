@@ -8,7 +8,8 @@ import ch.bildspur.artnet.rdm.RDMDeviceId;
 import ch.bildspur.artnet.rdm.RDMPacket;
 import ch.bildspur.artnet.rdm.RDMParameter;
 import dev.imabad.theatrical.Constants;
-import dev.imabad.theatrical.TheatricalExpectPlatform;
+import dev.imabad.theatrical.Theatrical;
+import net.fabricmc.loader.api.FabricLoader;
 import dev.imabad.theatrical.api.Fixture;
 import dev.imabad.theatrical.api.dmx.DMXPersonality;
 import dev.imabad.theatrical.api.dmx.DMXSlot;
@@ -82,7 +83,7 @@ public class TheatricalArtNetClient extends ArtNetClient {
     }
 
     private byte[] buildDeviceId(){
-        byte[] deviceID =  Arrays.copyOfRange(ByteUtils.longToBytes(Minecraft.getInstance().getGameProfile().getId().getLeastSignificantBits()), 0, 4);
+        byte[] deviceID =  Arrays.copyOfRange(ByteUtils.longToBytes(Minecraft.getInstance().getGameProfile().id().getLeastSignificantBits()), 0, 4);
         ByteBuffer wrap = ByteBuffer.wrap(new byte[6]);
         wrap.putShort(Constants.MANUFACTURER_ID);
         wrap.put(deviceID);
@@ -276,7 +277,9 @@ public class TheatricalArtNetClient extends ArtNetClient {
                                 }
                                 case SOFTWARE_VERSION_LABEL:
                                     getCommandResponse.setParameter(RDMParameter.SOFTWARE_VERSION_LABEL);
-                                    String modVersion = TheatricalExpectPlatform.getModVersion();
+                                    String modVersion = FabricLoader.getInstance().getModContainer(Theatrical.MOD_ID)
+                                            .map(container -> container.getMetadata().getVersion().getFriendlyString())
+                                            .orElse("Unknown");
                                     if (modVersion.length() > 32) {
                                         modVersion = modVersion.substring(0, 32);
                                     }
@@ -533,7 +536,7 @@ public class TheatricalArtNetClient extends ArtNetClient {
     private void buildAndSetPollReply(){
         ArtPollReplyPacket defaultReplyPacket = new ArtPollReplyPacket();
         defaultReplyPacket.setIp(address);
-        defaultReplyPacket.setLongName("Theatrical - " + Minecraft.getInstance().getGameProfile().getName());
+        defaultReplyPacket.setLongName("Theatrical - " + Minecraft.getInstance().getGameProfile().name());
         defaultReplyPacket.setShortName("Theatrical");
         defaultReplyPacket.setNodeStyle(NodeStyle.ST_NODE);
         defaultReplyPacket.setEstaManufacturerCode(0x7ff0);

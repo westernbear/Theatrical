@@ -1,37 +1,37 @@
-name: Standard Release
+name: GitHub Release
 
 on:
   push:
-    branches:
-      - "**"
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  build:
-    if: |
-      contains(github.event.head_commit.message, '[publish]')
+  release:
     runs-on: ubuntu-latest
+    env:
+      CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
     steps:
-      - name: Clone project
-        uses: actions/checkout@v3
-      - name: Set up JDK
-        uses: actions/setup-java@v2
+      - uses: actions/checkout@v7
+      - uses: gradle/actions/wrapper-validation@v6
+      - uses: actions/setup-java@v5
         with:
-          distribution: "temurin"
-          java-version: 17
-      - name: Fix borked permissions
-        run: chmod +x ./gradlew
-      - name: Run gradle tasks [build publish]
-        uses: gradle/gradle-build-action@v2
-        env:
-          SNAPSHOT: false
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-          CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
-          NEXUS_USERNAME: ${{secrets.NEXUS_USERNAME }}
-          NEXUS_PASSWORD: ${{secrets.NEXUS_PASSWORD }}
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew :fabric:build --stacktrace
+      - name: Publish to Modrinth
+        if: ${{ env.MODRINTH_TOKEN != '' }}
+        run: ./gradlew :fabric:publishModrinth --stacktrace
+      - name: Publish to CurseForge
+        if: ${{ env.CURSEFORGE_TOKEN != '' }}
+        run: ./gradlew :fabric:publishCurseforge --stacktrace
+      - uses: softprops/action-gh-release@v3
         with:
-          arguments: "build publishMods publishAllPublicationsToRushMavenRepository"
-      - name: Store artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-build-output
-          path: ./**/libs/*.jar
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: fabric/build/libs/Theatrical-fabric-*.jar

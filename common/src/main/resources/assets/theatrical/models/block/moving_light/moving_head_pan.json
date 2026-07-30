@@ -1,7 +1,8 @@
 {
 	"credit": "Made with Blockbench",
 	"textures": {
-		"1": "theatrical:block/moving_head_whole"
+		"1": "theatrical:block/moving_head_whole",
+		"particle": "theatrical:block/moving_head_whole"
 	},
 	"elements": [
 		{

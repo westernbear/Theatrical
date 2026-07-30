@@ -2,8 +2,8 @@ package dev.imabad.theatrical.net.artnet;
 
 import ch.bildspur.artnet.rdm.RDMDeviceId;
 import dev.architectury.networking.NetworkManager;
-import dev.architectury.networking.simple.BaseC2SMessage;
-import dev.architectury.networking.simple.MessageType;
+import dev.imabad.theatrical.net.TheatricalNet.BaseC2SMessage;
+import dev.imabad.theatrical.net.TheatricalNet.MessageType;
 import dev.imabad.theatrical.Theatrical;
 import dev.imabad.theatrical.blockentities.interfaces.RedstoneInterfaceBlockEntity;
 import dev.imabad.theatrical.blockentities.light.BaseDMXConsumerLightBlockEntity;

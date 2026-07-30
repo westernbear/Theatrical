@@ -2,6 +2,7 @@ package dev.imabad.theatrical.blockentities.control;
 
 import dev.imabad.theatrical.api.dmx.BelongsToNetwork;
 import dev.imabad.theatrical.api.dmx.DMXConsumer;
+import dev.imabad.theatrical.api.NBTStorage;
 import dev.imabad.theatrical.blockentities.BlockEntities;
 import dev.imabad.theatrical.blockentities.ClientSyncBlockEntity;
 import dev.imabad.theatrical.networks.TheatricalNetworkData;
@@ -12,6 +13,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 import java.util.*;
 
@@ -38,9 +41,9 @@ public class BasicLightingDeskBlockEntity extends ClientSyncBlockEntity implemen
         }
 
         public StoredCue fromNBT(CompoundTag nbt){
-            this.faders = nbt.getByteArray("faders");
-            this.fadeInTicks = nbt.getInt("fadeIn");
-            this.fadeOutTicks = nbt.getInt("fadeOut");
+            this.faders = nbt.getByteArray("faders").orElseGet(() -> new byte[12]);
+            this.fadeInTicks = nbt.getIntOr("fadeIn", 0);
+            this.fadeOutTicks = nbt.getIntOr("fadeOut", 0);
             return this;
         }
 
@@ -82,7 +85,7 @@ public class BasicLightingDeskBlockEntity extends ClientSyncBlockEntity implemen
     }
 
     public static <T extends BlockEntity> void tick(Level level, BlockPos pos, BlockState state, T be) {
-        if(level.isClientSide){
+        if(level.isClientSide()){
             return;
         }
         if(be instanceof BasicLightingDeskBlockEntity beL){
@@ -137,61 +140,41 @@ public class BasicLightingDeskBlockEntity extends ClientSyncBlockEntity implemen
     }
 
     @Override
-    public void write(CompoundTag compoundTag) {
-        if(compoundTag == null){
-            compoundTag = new CompoundTag();
-        }
-        compoundTag.putByteArray("faders", faders);
+    public void write(ValueOutput output) {
+        output.store("faders", NBTStorage.BYTE_ARRAY_CODEC, faders);
         CompoundTag compoundNBT = new CompoundTag();
         for(int key : storedSteps.keySet()){
             compoundNBT.put(Integer.toString(key), storedSteps.get(key).toNBT());
         }
-        compoundTag.put("storedSteps", compoundNBT);
-        compoundTag.putInt("currentStep", currentStep);
-        compoundTag.putByte("grandMaster", grandMaster);
-        compoundTag.putBoolean("isRunMode", isRunMode);
-        compoundTag.putInt("fadeInTicks", fadeInTicks);
-        compoundTag.putInt("fadeOutTicks", fadeOutTicks);
+        output.store("storedSteps", CompoundTag.CODEC, compoundNBT);
+        output.putInt("currentStep", currentStep);
+        output.putByte("grandMaster", grandMaster);
+        output.putBoolean("isRunMode", isRunMode);
+        output.putInt("fadeInTicks", fadeInTicks);
+        output.putInt("fadeOutTicks", fadeOutTicks);
         if(networkId != null){
-            compoundTag.putUUID("network", networkId);
+            output.store("network", net.minecraft.core.UUIDUtil.CODEC, networkId);
         }
-        compoundTag.putInt("universe", universe);
+        output.putInt("universe", universe);
     }
 
     @Override
-    public void read(CompoundTag compoundTag) {
-        if(compoundTag.contains("faders")){
-            faders = compoundTag.getByteArray("faders");
-        }
-        if(compoundTag.contains("storedSteps")){
+    public void read(ValueInput input) {
+        faders = input.read("faders", NBTStorage.BYTE_ARRAY_CODEC).orElseGet(() -> new byte[12]);
+        input.read("storedSteps", CompoundTag.CODEC).ifPresent(compoundNBT -> {
             storedSteps = new HashMap<>();
-            CompoundTag compoundNBT = compoundTag.getCompound("storedSteps");
-            for(String key : compoundNBT.getAllKeys()){
+            for(String key : compoundNBT.keySet()){
                 int stepNumber = Integer.parseInt(key);
-                storedSteps.put(stepNumber, new StoredCue().fromNBT(compoundNBT.getCompound(key)));
+                storedSteps.put(stepNumber, new StoredCue().fromNBT(compoundNBT.getCompoundOrEmpty(key)));
             }
-        }
-        if(compoundTag.contains("currentStep")){
-            currentStep = compoundTag.getInt("currentStep");
-        }
-        if(compoundTag.contains("grandMaster")){
-            grandMaster = compoundTag.getByte("grandMaster");
-        }
-        if(compoundTag.contains("isRunMode")){
-            isRunMode = compoundTag.getBoolean("isRunMode");
-        }
-        if(compoundTag.contains("fadeInTicks")){
-            fadeInTicks = compoundTag.getInt("fadeInTicks");
-        }
-        if(compoundTag.contains("fadeOutTicks")){
-            fadeOutTicks = compoundTag.getInt("fadeOutTicks");
-        }
-        if(compoundTag.contains("network")){
-            networkId = compoundTag.getUUID("network");
-        }
-        if(compoundTag.contains("universe")){
-            universe = compoundTag.getInt("universe");
-        }
+        });
+        currentStep = input.getIntOr("currentStep", 0);
+        grandMaster = input.getByteOr("grandMaster", (byte) -1);
+        isRunMode = input.getBooleanOr("isRunMode", false);
+        fadeInTicks = input.getIntOr("fadeInTicks", 0);
+        fadeOutTicks = input.getIntOr("fadeOutTicks", 0);
+        networkId = input.read("network", net.minecraft.core.UUIDUtil.CODEC).orElse(UUIDUtil.NULL);
+        universe = input.getIntOr("universe", 0);
     }
 
     public void setFaders(byte[] faders){

@@ -3,12 +3,13 @@ package dev.imabad.theatrical.blocks.light;
 import dev.imabad.theatrical.api.FocusableFixture;
 import dev.imabad.theatrical.items.Items;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
@@ -19,21 +20,21 @@ public abstract class BaseFocusableLightBlock extends BaseLightBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        InteractionResult superResult = super.use(state, level, pos, player, hand, hit);
-        if(superResult == InteractionResult.PASS) {
+    protected InteractionResult useItemOn(ItemStack itemInHand, BlockState state, Level level, BlockPos pos,
+                                          Player player, InteractionHand hand, BlockHitResult hit) {
+        InteractionResult superResult = super.useItemOn(itemInHand, state, level, pos, player, hand, hit);
+        if(superResult == InteractionResult.TRY_WITH_EMPTY_HAND) {
             if (!level.isClientSide()) {
-                ItemStack itemInHand = player.getItemInHand(hand);
                 if(itemInHand.is(Items.FIXTURE_FOCUSER.get())){
-                    CompoundTag itemTag = itemInHand.getOrCreateTag();
+                    CompoundTag itemTag = itemInHand.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
                     if(level.getBlockEntity(pos) instanceof FocusableFixture focusableFixture) {
                         if (!itemTag.contains("Light") && focusableFixture.getTrackingEntity() == null) {
-                            itemTag.put("Light", NbtUtils.writeBlockPos(pos));
+                            itemTag.store("Light", BlockPos.CODEC, pos);
                             focusableFixture.setTrackingEntity(player);
                         } else if(focusableFixture.getTrackingEntity() != null) {
                             focusableFixture.setTrackingEntity(null);
                         }
-                        itemInHand.save(itemTag);
+                        CustomData.set(DataComponents.CUSTOM_DATA, itemInHand, itemTag);
                     }
                     return InteractionResult.SUCCESS;
                 }

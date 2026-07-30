@@ -3,7 +3,6 @@ package dev.imabad.theatrical.client.gui.screen;
 import dev.imabad.theatrical.blockentities.light.BaseDMXConsumerLightBlockEntity;
 import dev.imabad.theatrical.client.gui.widgets.BasicSlider;
 import dev.imabad.theatrical.net.UpdateFixturePosition;
-import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.LayoutSettings;
 import net.minecraft.network.chat.Component;
@@ -36,10 +35,5 @@ public class GenericManualPanTiltScreen extends GenericDMXConfigurationScreen<Ba
     protected void update() {
         super.update();
         new UpdateFixturePosition(be.getBlockPos(), be.getTilt(), be.getPan()).sendToServer();
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphics guiGraphics) {
-        super.renderLabels(guiGraphics);
     }
 }

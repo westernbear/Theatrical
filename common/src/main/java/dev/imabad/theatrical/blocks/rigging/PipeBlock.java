@@ -1,5 +1,6 @@
 package dev.imabad.theatrical.blocks.rigging;
 
+import com.mojang.serialization.MapCodec;
 import dev.imabad.theatrical.api.FixtureProvider;
 import dev.imabad.theatrical.api.HangType;
 import dev.imabad.theatrical.api.Support;
@@ -24,7 +25,7 @@ import net.minecraft.world.level.block.DirectionalBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
@@ -38,7 +39,8 @@ import java.util.List;
 
 public class PipeBlock extends DirectionalBlock implements Support {
 
-    public static final DirectionProperty FACING = DirectionalBlock.FACING;
+    private static final MapCodec<PipeBlock> CODEC = simpleCodec(PipeBlock::new);
+    public static final EnumProperty<Direction> FACING = DirectionalBlock.FACING;
     private final VoxelShape Z_BOX = Shapes.create(new AABB(0.35, 0.4, 0, 0.65, 0.6, 1));
     private final VoxelShape Z_BOX_DOWN = Shapes.create(new AABB(0, 0, 0, 1, 0.6, 1));
     private final VoxelShape Z_BOX_UP = Shapes.create(new AABB(0, 0.4, 0, 1, 1, 1));
@@ -51,8 +53,8 @@ public class PipeBlock extends DirectionalBlock implements Support {
     private final VoxelShape Y_BOX_EAST = Shapes.create(new AABB(0.4, 0, 0, 1, 1, 1));
     private final VoxelShape Y_BOX_WEST = Shapes.create(new AABB(0, 0, 0, 0.6, 1, 1));
 
-    public PipeBlock() {
-        super(Properties.of()
+    public PipeBlock(Properties properties) {
+        super(properties
             .requiresCorrectToolForDrops()
             .strength(3, 3)
             .noOcclusion()
@@ -60,6 +62,11 @@ public class PipeBlock extends DirectionalBlock implements Support {
             .mapColor(MapColor.METAL)
             .sound(SoundType.METAL));
         this.registerDefaultState(this.getStateDefinition().any().setValue(FACING, Direction.NORTH));
+    }
+
+    @Override
+    protected MapCodec<PipeBlock> codec() {
+        return CODEC;
     }
 
     @Override
@@ -128,9 +135,10 @@ public class PipeBlock extends DirectionalBlock implements Support {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if(!player.getItemInHand(hand).isEmpty()){
-            Item item = player.getItemInHand(hand).getItem();
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                          Player player, InteractionHand hand, BlockHitResult hit) {
+        if(!stack.isEmpty()){
+            Item item = stack.getItem();
             if (item instanceof BlockItem blockItem) {
                 if(blockItem.getBlock() instanceof HangableBlock hangableBlock){
                     BlockPos offset;
@@ -157,13 +165,13 @@ public class PipeBlock extends DirectionalBlock implements Support {
                             .setValue(HangableBlock.HANG_DIRECTION, hangDirection);
                     level.setBlock(offset, hanglableBlockState, Block.UPDATE_CLIENTS);
                     if (!player.isCreative()) {
-                        player.getItemInHand(hand).shrink(1);
+                        stack.shrink(1);
                     }
-                    hangableBlock.setPlacedBy(level, offset, hanglableBlockState, player, player.getItemInHand(hand));
+                    hangableBlock.setPlacedBy(level, offset, hanglableBlockState, player, stack);
                     return InteractionResult.CONSUME;
                 }
             }
         }
-        return super.use(state, level, pos, player, hand, hit);
+        return super.useItemOn(stack, state, level, pos, player, hand, hit);
     }
 }

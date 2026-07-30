@@ -7,7 +7,7 @@ import dev.imabad.theatrical.blocks.light.BaseLightBlock;
 import dev.imabad.theatrical.fixtures.Fixtures;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
@@ -106,7 +106,7 @@ public class FresnelBlockEntity extends BaseDMXConsumerLightBlockEntity implemen
     }
 
     @Override
-    public ResourceLocation getFixtureId() {
+    public Identifier getFixtureId() {
         return Fixtures.LED_FRESNEL.getId();
     }
 
@@ -134,8 +134,4 @@ public class FresnelBlockEntity extends BaseDMXConsumerLightBlockEntity implemen
         return trackingEntity;
     }
 
-    @Override
-    public void lightTick() {
-        super.lightTick();
-    }
 }

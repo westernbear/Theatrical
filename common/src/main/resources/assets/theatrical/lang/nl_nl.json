@@ -53,6 +53,8 @@
   "ui.control.cues": "Cues",
   "ui.control.fadeIn": "Fade in",
   "ui.control.fadeOut": "Fade out",
+  "ui.control.fader": "Fader %s: %s",
+  "ui.control.grandMaster": "Grand master: %s",
   "ui.control.modes.program": "Programma Modus",
   "ui.control.modes.run": "Run Modus",
   "ui.control.step": "Stap - %s"

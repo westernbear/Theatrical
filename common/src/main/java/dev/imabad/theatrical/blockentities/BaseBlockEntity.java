@@ -2,10 +2,11 @@ package dev.imabad.theatrical.blockentities;
 
 import dev.imabad.theatrical.api.NBTStorage;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 
 public abstract class BaseBlockEntity extends BlockEntity implements NBTStorage {
     public BaseBlockEntity(BlockEntityType<?> blockEntityType, BlockPos blockPos, BlockState blockState) {
@@ -13,14 +14,14 @@ public abstract class BaseBlockEntity extends BlockEntity implements NBTStorage 
     }
 
     @Override
-    public void load(CompoundTag compoundTag) {
-        super.load(compoundTag);
-        read(compoundTag);
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        read(input);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag compoundTag) {
-        super.saveAdditional(compoundTag);
-        write(compoundTag);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        write(output);
     }
 }

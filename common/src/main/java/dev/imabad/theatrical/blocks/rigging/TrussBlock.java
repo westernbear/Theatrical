@@ -15,8 +15,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.SimpleWaterloggedBlock;
@@ -35,8 +35,8 @@ public class TrussBlock extends RotatedPillarBlock implements SimpleWaterloggedB
 
     private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
 
-    public TrussBlock() {
-        super(Properties.of()
+    public TrussBlock(Properties properties) {
+        super(properties
                 .requiresCorrectToolForDrops()
                 .strength(3, 3)
                 .noOcclusion()
@@ -70,11 +70,13 @@ public class TrussBlock extends RotatedPillarBlock implements SimpleWaterloggedB
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess ticks,
+                                     BlockPos pos, Direction direction, BlockPos neighborPos,
+                                     BlockState neighborState, net.minecraft.util.RandomSource random) {
         if(state.getValue(BlockStateProperties.WATERLOGGED)){
-            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+        return super.updateShape(state, level, ticks, pos, direction, neighborPos, neighborState, random);
     }
     @Override
     public float[] getHookTransforms(LevelReader levelReader, BlockPos pos, Direction facing) {
@@ -87,14 +89,15 @@ public class TrussBlock extends RotatedPillarBlock implements SimpleWaterloggedB
     }
 
     @Override
-    public boolean propagatesSkylightDown(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos) {
+    public boolean propagatesSkylightDown(BlockState blockState) {
         return true;
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
-        if(!player.getItemInHand(hand).isEmpty()){
-            Item item = player.getItemInHand(hand).getItem();
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                          Player player, InteractionHand hand, BlockHitResult hit) {
+        if(!stack.isEmpty()){
+            Item item = stack.getItem();
             if (item instanceof BlockItem blockItem) {
                 if(blockItem.getBlock() instanceof HangableBlock hangableBlock){
                     BlockPos offset;
@@ -115,16 +118,12 @@ public class TrussBlock extends RotatedPillarBlock implements SimpleWaterloggedB
                             .setValue(HangableBlock.HANGING, true)
                             .setValue(HangableBlock.HANG_DIRECTION, hangDirection), Block.UPDATE_CLIENTS);
                     if (!player.isCreative()) {
-                        if (player.getItemInHand(hand).getCount() > 1) {
-                            player.getItemInHand(hand).setCount(player.getItemInHand(hand).getCount() - 1);
-                        } else {
-                            player.setItemInHand(hand, new ItemStack(Items.AIR));
-                        }
+                        stack.shrink(1);
                     }
                     return InteractionResult.CONSUME;
                 }
             }
         }
-        return super.use(state, level, pos, player, hand, hit);
+        return super.useItemOn(stack, state, level, pos, player, hand, hit);
     }
 }

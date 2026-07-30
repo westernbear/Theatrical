@@ -1,192 +1,87 @@
 package dev.imabad.theatrical.client.blockentities;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.math.Axis;
-import dev.imabad.theatrical.TheatricalExpectPlatform;
 import dev.imabad.theatrical.blockentities.light.LEDPanelBlockEntity;
 import dev.imabad.theatrical.blocks.HangableBlock;
-import dev.imabad.theatrical.client.LazyRenderers;
+import dev.imabad.theatrical.client.BakedModelCache;
 import dev.imabad.theatrical.client.TheatricalRenderTypes;
-import net.minecraft.client.Camera;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
-import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
 
-import java.util.Optional;
-
-public class LEDPanelRenderer extends FixtureRenderer<LEDPanelBlockEntity> {
-    private BakedModel cachedStaticModel;
+public final class LEDPanelRenderer extends FixtureRenderer<LEDPanelBlockEntity> {
     public LEDPanelRenderer(BlockEntityRendererProvider.Context context) {
         super(context);
     }
 
     @Override
-    public void renderModel(LEDPanelBlockEntity blockEntity, PoseStack poseStack, VertexConsumer vertexConsumer, Direction facing, float partialTicks, boolean isFlipped, BlockState blockState, boolean isHanging, int packedLight, int packedOverlay) {
-        if(cachedStaticModel == null){
-            cachedStaticModel = TheatricalExpectPlatform.getBakedModel(blockEntity.getFixture().getStaticModel());
-        }
-        //#region Fixture Hanging
-        poseStack.translate(0.5F, 0, .5F);
-        if(isHanging){
-            Direction hangDirection = blockState.getValue(HangableBlock.HANG_DIRECTION);
-            poseStack.translate(0, 0.5, 0F);
-            if(hangDirection.getAxis() != Direction.Axis.Y){
-                if(hangDirection.getAxis() == Direction.Axis.Z){
-                    if(hangDirection == Direction.SOUTH) {
-//                        poseStack.mulPose(Axis.ZP.rotationDegrees(90));
-                        poseStack.mulPose(Axis.XN.rotationDegrees(180));
-                    } else {
-                        poseStack.mulPose(Axis.XN.rotationDegrees(180));
-                    }
-                }
-            } else {
-                if(hangDirection == Direction.UP){
-                    switch (facing){
-                        case NORTH -> poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                        case SOUTH -> poseStack.mulPose(Axis.XN.rotationDegrees(90));
-                        case WEST -> {
-                            poseStack.mulPose(Axis.ZP.rotationDegrees(90));
-                            poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                        }
-                        case EAST -> {
-                            poseStack.mulPose(Axis.ZN.rotationDegrees(90));
-                            poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                        }
-                    }
-                } else if(hangDirection == Direction.DOWN){
-                    switch (facing){
-                        case NORTH -> poseStack.mulPose(Axis.XN.rotationDegrees(90));
-                        case SOUTH -> poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                        case WEST -> {
-                            poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                            poseStack.mulPose(Axis.YN.rotationDegrees(90));
-                        }
-                        case EAST -> {
-                            poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                            poseStack.mulPose(Axis.YP.rotationDegrees(90));
-                        }
-                    }
-                }
-            }
-            poseStack.translate(0, -0.5, 0F);
-        }
-        //#endregion
-        poseStack.mulPose(Axis.YP.rotationDegrees(facing.toYRot()));
-        poseStack.translate(-0.5F, 0, -.5F);
-        if (isHanging) {
-            Optional<BlockState> optionalSupport = blockEntity.getSupportingStructure();
-            if (optionalSupport.isPresent()) {
-                float[] transforms = blockEntity.getFixture().getTransforms(blockState, optionalSupport.get());
-                poseStack.translate(transforms[0], transforms[1], transforms[2]);
-            } else {
-                poseStack.translate(0, 0.19, 0);
-            }
-        }
-        // Static Model Render
-        minecraftRenderModel(poseStack, vertexConsumer, blockState, cachedStaticModel, packedLight, packedOverlay);
+    protected void submitModels(FixtureRenderState state, PoseStack poseStack,
+                                SubmitNodeCollector submitNodeCollector) {
+        preparePoseStack(state, poseStack);
+        submitModel(state, poseStack, submitNodeCollector,
+                BakedModelCache.get(state.fixture.getStaticModel()));
     }
 
     @Override
-    public void beforeRenderBeam(LEDPanelBlockEntity blockEntity, PoseStack poseStack, VertexConsumer vertexConsumer, MultiBufferSource multiBufferSource, Direction facing, float partialTicks, boolean isFlipped, BlockState blockstate, boolean isHanging, int packedLight, int packedOverlay) {
-        if(blockEntity.getIntensity() > 0){
-            LazyRenderers.addLazyRender(new LazyRenderers.LazyRenderer() {
-                @Override
-                public void render(MultiBufferSource.BufferSource bufferSource, PoseStack poseStack, Camera camera, float partialTick) {
-                    poseStack.pushPose();
-                    Vec3 offset = Vec3.atLowerCornerOf(blockEntity.getBlockPos()).subtract(camera.getPosition());
-                    poseStack.translate(offset.x, offset.y, offset.z);
-                    preparePoseStack(blockEntity, poseStack, facing, partialTick, isFlipped, blockstate, isHanging);
-                    VertexConsumer beamConsumer = multiBufferSource.getBuffer(TheatricalRenderTypes.BEAM);
-//            poseStack.translate(blockEntity.getFixture().getBeamStartPosition()[0], blockEntity.getFixture().getBeamStartPosition()[1], blockEntity.getFixture().getBeamStartPosition()[2]);
-                    float intensity = (blockEntity.getPrevIntensity() + ((blockEntity.getIntensity()) - blockEntity.getPrevIntensity()) * partialTicks);
-                    int color = blockEntity.getColour();
-                    int r = (color >> 16) & 0xFF;
-                    int g = (color >> 8) & 0xFF;
-                    int b = color & 0xFF;
-                    int a = (int) (((intensity * 1) / 255f) * 255);
-                    poseStack.translate(0, 0f, -0.01f);
-                    Matrix4f m = poseStack.last().pose();
-                    Matrix3f normal = poseStack.last().normal();
-                    addVertex(beamConsumer, m, normal, r, g, b, a, 0, 1 , 0);
-                    addVertex(beamConsumer, m, normal, r, g, b, a,  1, 1, 0);
-                    addVertex(beamConsumer, m, normal, r, g, b, a, 1, 0, 0);
-                    addVertex(beamConsumer, m, normal, r, g, b, a,0, 0, 0);
-                    poseStack.popPose();
-                }
+    protected void preparePoseStack(FixtureRenderState state, PoseStack poseStack) {
+        Direction facing = state.blockState.getValue(HangableBlock.FACING);
 
-                @Override
-                public Vec3 getPos(float partialTick) {
-                    return blockEntity.getBlockPos().getCenter();
-                }
-            });
+        poseStack.translate(0.5F, 0, 0.5F);
+        if (state.hanging) {
+            Direction hangDirection = state.blockState.getValue(HangableBlock.HANG_DIRECTION);
+            poseStack.translate(0, 0.5, 0);
+            if (hangDirection.getAxis() == Direction.Axis.Z) {
+                poseStack.mulPose(com.mojang.math.Axis.XN.rotationDegrees(180));
+            } else if (hangDirection == Direction.UP) {
+                rotateVertical(poseStack, facing, true);
+            } else if (hangDirection == Direction.DOWN) {
+                rotateVertical(poseStack, facing, false);
+            }
+            poseStack.translate(0, -0.5, 0);
+        }
+        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(facing.toYRot()));
+        poseStack.translate(-0.5F, 0, -0.5F);
+        if (state.hanging) {
+            float[] transform = state.supportingStructure == null
+                    ? new float[]{0, 0.19f, 0}
+                    : state.fixture.getTransforms(state.blockState, state.supportingStructure);
+            poseStack.translate(transform[0], transform[1], transform[2]);
         }
     }
 
     @Override
-    public void preparePoseStack(LEDPanelBlockEntity blockEntity, PoseStack poseStack, Direction facing, float partialTicks, boolean isFlipped, BlockState blockState, boolean isHanging) {
-        //#region Fixture Hanging
-        poseStack.translate(0.5F, 0, .5F);
-        if(isHanging){
-            Direction hangDirection = blockState.getValue(HangableBlock.HANG_DIRECTION);
-            poseStack.translate(0, 0.5, 0F);
-            if(hangDirection.getAxis() != Direction.Axis.Y){
-                if(hangDirection.getAxis() == Direction.Axis.Z){
-                    if(hangDirection == Direction.SOUTH) {
-//                        poseStack.mulPose(Axis.ZP.rotationDegrees(90));
-                        poseStack.mulPose(Axis.XN.rotationDegrees(180));
-                    } else {
-                        poseStack.mulPose(Axis.XN.rotationDegrees(180));
-                    }
-                }
-            } else {
-                if(hangDirection == Direction.UP){
-                    switch (facing){
-                        case NORTH -> poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                        case SOUTH -> poseStack.mulPose(Axis.XN.rotationDegrees(90));
-                        case WEST -> {
-                            poseStack.mulPose(Axis.ZP.rotationDegrees(90));
-                            poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                        }
-                        case EAST -> {
-                            poseStack.mulPose(Axis.ZN.rotationDegrees(90));
-                            poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                        }
-                    }
-                } else if(hangDirection == Direction.DOWN){
-                    switch (facing){
-                        case NORTH -> poseStack.mulPose(Axis.XN.rotationDegrees(90));
-                        case SOUTH -> poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                        case WEST -> {
-                            poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                            poseStack.mulPose(Axis.YN.rotationDegrees(90));
-                        }
-                        case EAST -> {
-                            poseStack.mulPose(Axis.XP.rotationDegrees(90));
-                            poseStack.mulPose(Axis.YP.rotationDegrees(90));
-                        }
-                    }
-                }
+    protected void submitEmitter(FixtureRenderState state, PoseStack poseStack,
+                                 SubmitNodeCollector submitNodeCollector) {
+        int color = state.color;
+        int r = color >> 16 & 0xFF;
+        int g = color >> 8 & 0xFF;
+        int b = color & 0xFF;
+        float intensity = state.prevIntensity + (state.intensity - state.prevIntensity) * state.partialTick;
+        int alpha = (int) intensity;
+        poseStack.translate(0, 0, -0.01f);
+        submitNodeCollector.submitCustomGeometry(poseStack, TheatricalRenderTypes.BEAM,
+                (pose, builder) -> {
+                    addVertex(builder, pose, r, g, b, alpha, 0, 1, 0);
+                    addVertex(builder, pose, r, g, b, alpha, 1, 1, 0);
+                    addVertex(builder, pose, r, g, b, alpha, 1, 0, 0);
+                    addVertex(builder, pose, r, g, b, alpha, 0, 0, 0);
+                });
+    }
+
+    private static void rotateVertical(PoseStack poseStack, Direction facing, boolean up) {
+        switch (facing) {
+            case NORTH -> poseStack.mulPose((up ? com.mojang.math.Axis.XP : com.mojang.math.Axis.XN)
+                    .rotationDegrees(90));
+            case SOUTH -> poseStack.mulPose((up ? com.mojang.math.Axis.XN : com.mojang.math.Axis.XP)
+                    .rotationDegrees(90));
+            case WEST -> {
+                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
+                poseStack.mulPose((up ? com.mojang.math.Axis.ZP : com.mojang.math.Axis.YN).rotationDegrees(90));
             }
-            poseStack.translate(0, -0.5, 0F);
-        }
-        //#endregion
-        poseStack.mulPose(Axis.YP.rotationDegrees(facing.toYRot()));
-        poseStack.translate(-0.5F, 0, -.5F);
-        if (isHanging) {
-            Optional<BlockState> optionalSupport = blockEntity.getSupportingStructure();
-            if (optionalSupport.isPresent()) {
-                float[] transforms = blockEntity.getFixture().getTransforms(blockState, optionalSupport.get());
-                poseStack.translate(transforms[0], transforms[1], transforms[2]);
-            } else {
-                poseStack.translate(0, 0.19, 0);
+            case EAST -> {
+                poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
+                poseStack.mulPose((up ? com.mojang.math.Axis.ZN : com.mojang.math.Axis.YP).rotationDegrees(90));
             }
         }
     }
-
 }

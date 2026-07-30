@@ -2,6 +2,8 @@ package dev.imabad.theatrical.blockentities.light;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.CollisionGetter;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -34,8 +36,18 @@ public class LightCollisionContext implements CollisionContext {
     }
 
     @Override
+    public boolean alwaysCollideWithFluid() {
+        return false;
+    }
+
+    @Override
     public boolean canStandOnFluid(FluidState fluidState, FluidState fluidState2) {
         return false;
+    }
+
+    @Override
+    public VoxelShape getCollisionShape(BlockState state, CollisionGetter level, BlockPos pos) {
+        return state.getCollisionShape(level, pos, this);
     }
 
 }
