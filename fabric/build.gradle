@@ -37,6 +37,7 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
     implementation "dev.architectury:architectury-fabric:${rootProject.architectury_version}"
     implementation("com.github.westernbear:lumina:v1.0.7-fabric.1") { transitive = false }
+    compileOnly("maven.modrinth:iris:1.11.2+26.2-fabric") { transitive = false }
 
     implementation "ch.bildspur:artnet4j:${rootProject.artnet4j_version}"
     include "ch.bildspur:artnet4j:${rootProject.artnet4j_version}"

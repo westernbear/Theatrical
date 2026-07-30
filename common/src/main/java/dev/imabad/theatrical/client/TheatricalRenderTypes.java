@@ -9,7 +9,10 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import dev.architectury.platform.Platform;
 import dev.imabad.theatrical.Theatrical;
+import net.irisshaders.iris.api.v0.IrisApi;
+import net.irisshaders.iris.api.v0.IrisProgram;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -27,6 +30,12 @@ public final class TheatricalRenderTypes {
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
             .withCull(false)
             .build());
+
+    static {
+        if (Platform.isModLoaded("iris")) {
+            IrisCompat.register();
+        }
+    }
 
     public static final RenderType FIXTURE_MODEL = RenderType.create("theatrical_fixture_model",
             RenderSetup.builder(RenderPipelines.CUTOUT_BLOCK)
@@ -51,5 +60,13 @@ public final class TheatricalRenderTypes {
                 .withFragmentShader("core/position_color")
                 .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR)
                 .withPrimitiveTopology(PrimitiveTopology.QUADS);
+    }
+
+    private static final class IrisCompat {
+        private static void register() {
+            IrisApi api = IrisApi.getInstance();
+            api.assignPipeline(FADER_PIPELINE, IrisProgram.BASIC);
+            api.assignPipeline(BEAM_PIPELINE, IrisProgram.BASIC);
+        }
     }
 }
