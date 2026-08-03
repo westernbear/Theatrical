@@ -15,6 +15,7 @@ allprojects {
 
     repositories {
         maven { url "https://maven.architectury.dev/" }
+        maven { url "https://maven.caffeinemc.net/releases" }
         maven {
             name = "Rushmead"
             url = "https://mvn.imabad.dev/repository/maven-releases/"

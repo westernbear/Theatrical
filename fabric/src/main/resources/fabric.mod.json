@@ -39,6 +39,6 @@
     "minecraft": "~26.2",
     "java": ">=25",
     "architectury": ">=21.0.6",
-    "lumina": ">=1.0.7-fabric.1"
+    "lumina": ">=1.0.8-fabric.1"
   }
 }
