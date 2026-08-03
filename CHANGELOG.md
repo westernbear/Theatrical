@@ -1,3 +1,8 @@
+# 1.0.0-alpha.30
+
+* Name the Basic Lighting Desk controls as DMX channels 1-12 and Grand Master.
+* Enable Lumina shadows for Theatrical fixture lights.
+
 # 1.0.0-alpha.29
 
 * Port to Minecraft 26.2 with Fabric support.
