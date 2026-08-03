@@ -240,7 +240,7 @@ public abstract class BaseLightBlockEntity extends ClientSyncBlockEntity impleme
                 .intensity(intensity)
                 .distance(Mth.clamp((float) distance, 0.0F, 200.0F))
                 .angle(outerAngle * 0.75F, outerAngle)
-                .setShadow(LightCaster.ShadowConfig.DEFAULT.withEnabled(false))
+                .setShadow(LightCaster.ShadowConfig.DEFAULT)
                 .setFlare(LightCaster.FlareConfig.DEFAULT.withEnabled(false));
 
         if (luminaLight == null) {
@@ -262,7 +262,8 @@ public abstract class BaseLightBlockEntity extends ClientSyncBlockEntity impleme
                 && first.getIntensity() == second.getIntensity()
                 && first.getDistance() == second.getDistance()
                 && first.getInnerAngle() == second.getInnerAngle()
-                && first.getOuterAngle() == second.getOuterAngle();
+                && first.getOuterAngle() == second.getOuterAngle()
+                && first.getShadow().equals(second.getShadow());
     }
 
     public int getPan() {

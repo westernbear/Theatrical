@@ -36,7 +36,7 @@ public class BasicLightingDeskScreen extends Screen {
     public BasicLightingDeskScreen(BasicLightingDeskBlockEntity blockEntity) {
         super(Component.translatable("screen.basicLightingDesk"));
         this.imageWidth = 244;
-        this.imageHeight = 172;
+        this.imageHeight = 184;
         this.be = blockEntity;
         this.networkId = be.getNetworkId();
     }
@@ -57,19 +57,20 @@ public class BasicLightingDeskScreen extends Screen {
         int relX = (this.width - this.imageWidth) / 2;
         int relY = (this.height - this.imageHeight) / 2;
         graphics.blit(RenderPipelines.GUI_TEXTURED, GUI, relX, relY, 0, 0, this.imageWidth, PANEL_HEIGHT, 256, 256);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, GUI, relX, relY + 124, 0, 100, 200, 24, 256, 256);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, GUI, relX, relY + 124, 0, 90, 200, 34, 256, 256);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, GUI, relX + 200, relY + 124, 200, 90, 44, 34, 256, 256);
     }
 
     private void extractLabels(GuiGraphicsExtractor graphics) {
         for (int i = 0; i < be.getFaders().length; i++) {
             Component label = Component.literal(Integer.toString(i + 1));
             int centerX = xCenter + 12 + ((i % 6) * 20);
-            graphics.text(font, label, centerX - (font.width(label) / 2), yCenter + 127 + ((i / 6) * 10), 0xFF404040, false);
+            graphics.text(font, label, centerX - (font.width(label) / 2), yCenter + 138 + ((i / 6) * 10), 0xFF404040, false);
         }
-        graphics.text(font, Component.literal("TOP"), xCenter + 139, yCenter + 127, 0xFF404040, false);
-        graphics.text(font, Component.literal("BOTTOM"), xCenter + 130, yCenter + 137, 0xFF404040, false);
-        Component master = Component.literal("GM");
-        graphics.text(font, master, xCenter + 189 - (font.width(master) / 2), yCenter + 132, 0xFF404040, false);
+        Component channels = Component.literal("DMX Channels");
+        graphics.text(font, channels, xCenter + 62 - (font.width(channels) / 2), yCenter + 127, 0xFF404040, false);
+        Component master = Component.literal("Grand Master");
+        graphics.text(font, master, xCenter + 164 - (font.width(master) / 2), yCenter + 143, 0xFF404040, false);
         extractLabel(graphics, "ui.control.step", 20, 57, be.getCurrentStep());
         extractLabel(graphics, be.isRunMode() ? "ui.control.modes.run" : "ui.control.modes.program", 41, 90);
         extractLabel(graphics, "ui.control.cues", 100, 5);
@@ -130,7 +131,7 @@ public class BasicLightingDeskScreen extends Screen {
             return Component.literal("Unknown");
         }, networkId).withValues(CycleButton.ValueListSupplier.create(Stream.concat(Stream.of(UUIDUtil.NULL),
                         TheatricalClient.getArtNetManager().getKnownNetworks().keySet().stream()).collect(Collectors.toList())))
-                .create(xCenter + 45, yCenter + 152, 150, 20,
+                .create(xCenter + 45, yCenter + 164, 150, 20,
                         Component.translatable("screen.artnetconfig.network"), (obj, val) -> {
                             this.networkId = val;
                             new UpdateNetworkId(be.getBlockPos(), networkId).sendToServer();

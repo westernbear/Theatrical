@@ -106,7 +106,7 @@ public final class TheatricalDatagenFabric implements DataGeneratorEntrypoint {
             translations.add("ui.control.cue", "Cue - %s");
             translations.add("ui.control.fadeIn", "Fade in");
             translations.add("ui.control.fadeOut", "Fade out");
-            translations.add("ui.control.fader", "Fader %s: %s");
+            translations.add("ui.control.fader", "DMX channel %s: %s");
             translations.add("ui.control.grandMaster", "Grand master: %s");
             translations.add("commands.network.notfound", "Network not found.");
             translations.add("commands.networks", "There are %s network(s): %s.");

@@ -228,7 +228,7 @@ public final class TheatricalClientGameTest implements FabricClientGameTest {
                         && pos.equals(light.getBlockPos())
                         && light.getPersistence() == LightCaster.Persistence.TEMPORARY
                         && light.getVolumetric().enabled()
-                        && !light.getShadow().enabled()
+                        && light.getShadow().enabled()
                         && !light.getFlare().enabled()
                         && close(light.getDirection().x(), direction.x)
                         && close(light.getDirection().y(), direction.y)
