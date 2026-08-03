@@ -1,16 +1,20 @@
 package dev.imabad.theatrical.fabric;
 
-import dev.imabad.theatrical.blockentities.light.BaseLightBlockEntity;
+import dev.imabad.theatrical.blockentities.control.BasicLightingDeskBlockEntity;
 import dev.imabad.theatrical.blockentities.light.BaseDMXConsumerLightBlockEntity;
+import dev.imabad.theatrical.blockentities.light.BaseLightBlockEntity;
 import dev.imabad.theatrical.blocks.Blocks;
 import dev.imabad.theatrical.client.gui.screen.ArtNetConfigurationScreen;
+import dev.imabad.theatrical.client.gui.screen.BasicLightingDeskScreen;
 import dev.imabad.theatrical.client.gui.screen.GenericManualPanTiltScreen;
 import dev.imabad.theatrical.client.gui.widgets.BasicSlider;
+import dev.imabad.theatrical.client.gui.widgets.FaderWidget;
 import io.github.westernbear.lumina.api.LuminaLights;
 import io.github.westernbear.lumina.light.LightCaster;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -37,6 +41,7 @@ public final class TheatricalClientGameTest implements FabricClientGameTest {
                     singleplayer.getConnection().getServerPlayer().blockPosition().east(4));
             BlockPos manualFresnel = origin.west();
             BlockPos artNetInterface = origin.west().north(2);
+            BlockPos lightingDesk = origin.north(2);
 
             singleplayer.getServer().runOnServer(server -> {
                 var level = singleplayer.getConnection().getServerLevel();
@@ -46,6 +51,7 @@ public final class TheatricalClientGameTest implements FabricClientGameTest {
                 placeAndLight(level, origin.south(6), Blocks.LED_PANEL.get(), dmx(255, 64, 180, 255));
                 placeAndLight(level, manualFresnel, Blocks.LED_FRESNEL.get(), dmx(255, 255, 255, 255));
                 level.setBlock(artNetInterface, Blocks.ART_NET_INTERFACE.get().defaultBlockState(), Block.UPDATE_ALL);
+                level.setBlock(lightingDesk, Blocks.BASIC_LIGHTING_DESK.get().defaultBlockState(), Block.UPDATE_ALL);
             });
 
             context.waitTick();
@@ -64,7 +70,8 @@ public final class TheatricalClientGameTest implements FabricClientGameTest {
                     255, 255, 180, 64)
                     && spotlightMatches(client.level, LuminaLights.clientLights(client.level), manualFresnel,
                     255, 255, 255, 255)
-                    && client.level.getBlockState(artNetInterface).is(Blocks.ART_NET_INTERFACE.get()));
+                    && client.level.getBlockState(artNetInterface).is(Blocks.ART_NET_INTERFACE.get())
+                    && client.level.getBlockState(lightingDesk).is(Blocks.BASIC_LIGHTING_DESK.get()));
             context.getInput().lookAt(origin.south(3).above());
             context.waitTicks(20);
             context.takeScreenshot("theatrical_lit_fixtures");
@@ -160,6 +167,17 @@ public final class TheatricalClientGameTest implements FabricClientGameTest {
             context.waitTick();
             context.getInput().pressKey(options -> options.keyUse);
             context.waitForScreen(ArtNetConfigurationScreen.class);
+            context.setScreen(() -> null);
+
+            context.setScreen(() -> {
+                if (!(Minecraft.getInstance().level.getBlockEntity(lightingDesk) instanceof BasicLightingDeskBlockEntity desk)) {
+                    throw new AssertionError("Missing lighting desk block entity at " + lightingDesk);
+                }
+                return new BasicLightingDeskScreen(desk);
+            });
+            context.waitForScreen(BasicLightingDeskScreen.class);
+            context.waitFor(client -> widgetCount(client.gui.screen(), FaderWidget.class) == 13);
+            context.takeScreenshot("theatrical_basic_lighting_desk");
             context.setScreen(() -> null);
         }
     }
