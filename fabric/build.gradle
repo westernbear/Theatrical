@@ -19,6 +19,14 @@ sourceSets {
     }
 }
 
+repositories {
+    maven { url "https://maven.caffeinemc.net/releases" }
+    maven {
+        url "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
+}
+
 fabricApi {
     configureDataGeneration {
         client = true
@@ -28,6 +36,15 @@ fabricApi {
         enableGameTests = false
         enableClientGameTests = true
         modId = "theatrical"
+    }
+
+
+}
+
+
+loom {
+    runs.configureEach {
+        generateRunConfig = true
     }
 }
 
@@ -45,6 +62,9 @@ dependencies {
 
     implementation "org.yaml:snakeyaml:${rootProject.snakeyaml_version}"
     include "org.yaml:snakeyaml:${rootProject.snakeyaml_version}"
+
+    runtimeOnly "net.caffeinemc:sodium-fabric:0.9.1+mc26.2"
+    runtimeOnly "maven.modrinth:iris:1.11.2+26.2-fabric"
 
     testImplementation "org.junit.jupiter:junit-jupiter:5.13.4"
     testRuntimeOnly "org.junit.platform:junit-platform-launcher"
